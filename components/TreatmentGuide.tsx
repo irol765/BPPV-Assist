@@ -168,13 +168,13 @@ const TreatmentGuide: React.FC<TreatmentGuideProps> = ({ maneuver, onComplete, o
         </div>
 
         {/* Action Controls */}
-        <div className="p-3 md:p-5 border-t border-slate-200 bg-slate-50 safe-pb">
-            <div className="flex items-stretch gap-2 md:gap-4 h-16 md:h-20">
+        <div className="p-2 md:p-5 border-t border-slate-200 bg-slate-50 safe-pb">
+            <div className="flex items-stretch gap-2 md:gap-4 h-14 md:h-20">
                 
                 {/* Back Button */}
                 <button 
                     onClick={handlePrev}
-                    className="w-12 md:w-16 flex items-center justify-center rounded-xl md:rounded-2xl border border-slate-200 text-slate-400 hover:bg-white active:scale-95 transition bg-white"
+                    className="w-10 md:w-16 flex items-center justify-center rounded-xl md:rounded-2xl border border-slate-200 text-slate-400 hover:bg-white active:scale-95 transition bg-white"
                 >
                     <ChevronLeft size={24} />
                 </button>
@@ -224,7 +224,7 @@ const TreatmentGuide: React.FC<TreatmentGuideProps> = ({ maneuver, onComplete, o
                 <button 
                     onClick={handleNext}
                     className={`
-                        px-4 md:px-6 rounded-xl md:rounded-2xl font-bold text-white flex items-center justify-center gap-1 transition-all active:scale-95 min-w-[3rem]
+                        px-3 md:px-6 rounded-xl md:rounded-2xl font-bold text-white flex items-center justify-center gap-1 transition-all active:scale-95 min-w-[3rem]
                         ${isTimerDone 
                             ? 'bg-medical-600 hover:bg-medical-700 shadow-lg shadow-medical-200 ring-2 ring-medical-100' 
                             : 'bg-slate-800 hover:bg-slate-700 opacity-90'

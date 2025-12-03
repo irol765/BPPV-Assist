@@ -139,25 +139,30 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
 
   const extractFramesFromVideo = async (videoUrl: string): Promise<string[]> => {
       return new Promise(async (resolve, reject) => {
-          // Create video element
           const video = document.createElement('video');
           video.src = videoUrl;
           video.muted = true;
           video.playsInline = true;
           video.crossOrigin = "anonymous";
           
-          // Critical: Append to body (hidden) so browser processes events correctly
-          // Detached video elements often have throttled or broken seeking in some browsers
+          // FIX FOR BLACK FRAMES:
+          // 1. Element must be in DOM.
+          // 2. Element should be technically "visible" (even if transparent) for renderer to paint frames.
           video.style.position = 'fixed';
-          video.style.top = '-9999px';
-          video.style.left = '-9999px';
+          video.style.zIndex = '-1000';
+          video.style.top = '0';
+          video.style.left = '0';
+          video.style.width = '10px';
+          video.style.height = '10px';
+          video.style.opacity = '0'; // Invisible but present
+          video.style.pointerEvents = 'none';
+          
           document.body.appendChild(video);
           
           const frames: string[] = [];
           const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
+          const ctx = canvas.getContext('2d', { willReadFrequently: true });
           
-          // Target 10 seconds at 10 FPS
           const MAX_DURATION = 10; 
           const FPS = 10;
           
@@ -168,7 +173,14 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
                   canvas.width = Math.min(video.videoWidth, 640);
                   canvas.height = (video.videoHeight / video.videoWidth) * canvas.width;
                   
-                  // Use duration or fallback if infinity
+                  // Force decoder wake-up
+                  try {
+                    await video.play();
+                    video.pause();
+                  } catch (e) {
+                     console.debug("Autoplay prevented, continuing", e);
+                  }
+
                   const duration = (!video.duration || video.duration === Infinity) ? 10 : video.duration;
                   const analyzeDuration = Math.min(duration, MAX_DURATION);
                   const totalFrames = Math.floor(analyzeDuration * FPS);
@@ -177,33 +189,22 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
                   for (let i = 0; i < totalFrames; i++) {
                       const targetTime = i * timeInterval;
                       
-                      // Reliable seek with timeout safety
-                      await new Promise<void>((seekResolve) => {
-                          let resolved = false;
-                          const onSeeked = () => {
-                              if (resolved) return;
-                              resolved = true;
-                              video.removeEventListener('seeked', onSeeked);
-                              seekResolve();
-                          };
-                          
-                          video.addEventListener('seeked', onSeeked);
-                          video.currentTime = targetTime;
-                          
-                          // Fallback if event doesn't fire (prevents hanging at 2%)
-                          setTimeout(() => {
-                              if (!resolved) {
-                                  resolved = true;
-                                  video.removeEventListener('seeked', onSeeked);
-                                  seekResolve();
-                              }
-                          }, 500); 
+                      video.currentTime = targetTime;
+                      
+                      // Wait for seeked event
+                      await new Promise<void>((r) => {
+                          const h = () => { video.removeEventListener('seeked', h); r(); };
+                          video.addEventListener('seeked', h);
+                          // Backup timeout if seeked doesn't fire
+                          setTimeout(h, 500);
                       });
+                      
+                      // CRITICAL: Double rAF to ensure frame is painted to video element
+                      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
                       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                       frames.push(canvas.toDataURL('image/jpeg', 0.7)); 
                       
-                      // Update progress visually (0-80% during capture)
                       setCaptureProgress(Math.round(((i + 1) / totalFrames) * 80)); 
                   }
                   
@@ -212,7 +213,6 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
               } catch (e) {
                   reject(e);
               } finally {
-                  // Cleanup DOM
                   if (document.body.contains(video)) {
                       document.body.removeChild(video);
                   }
@@ -224,6 +224,9 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
               if (document.body.contains(video)) document.body.removeChild(video);
               reject(new Error("Video load failed"));
           };
+          
+          // Trigger load
+          video.load();
       });
   };
 
