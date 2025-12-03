@@ -1,6 +1,6 @@
 
 import React, { useRef, useState, useEffect } from 'react';
-import { Camera, RefreshCw, AlertCircle, ArrowLeft, ArrowRight, SwitchCamera, Upload, Film } from 'lucide-react';
+import { Camera, RefreshCw, AlertCircle, ArrowLeft, ArrowRight, SwitchCamera, Upload, Film, ScanEye } from 'lucide-react';
 import { analyzeEyeMovement } from '../services/geminiService';
 import { DiagnosisResult, Language, Side } from '../types';
 import { translations } from '../translations';
@@ -82,8 +82,8 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
       const mediaStream = await navigator.mediaDevices.getUserMedia({ 
         video: { 
             facingMode: facingMode,
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
+            width: { ideal: 1920 }, // Request higher res
+            height: { ideal: 1080 },
             frameRate: { ideal: 30 }
         } 
       });
@@ -151,8 +151,10 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
               }
           });
 
-          // Set dimensions
-          canvas.width = Math.min(video.videoWidth, 640);
+          // Set dimensions - Higher Resolution for better accuracy
+          // Limit max width to 800px to balance quality vs token usage/speed
+          const MAX_WIDTH = 800; 
+          canvas.width = Math.min(video.videoWidth, MAX_WIDTH);
           canvas.height = (video.videoHeight / video.videoWidth) * canvas.width;
 
           // Wake up decoder
@@ -163,7 +165,7 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
 
           const duration = (!video.duration || video.duration === Infinity) ? 10 : video.duration;
           const analyzeDuration = Math.min(duration, 10); // Cap at 10s
-          const FPS = 10;
+          const FPS = 12; // Slightly higher FPS
           const totalFrames = Math.floor(analyzeDuration * FPS);
           const frames: string[] = [];
 
@@ -186,7 +188,7 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
               await new Promise(r => requestAnimationFrame(r));
               
               ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-              frames.push(canvas.toDataURL('image/jpeg', 0.7));
+              frames.push(canvas.toDataURL('image/jpeg', 0.85)); // Higher quality JPEG
               
               setCaptureProgress(Math.round(((i + 1) / totalFrames) * 80));
           }
@@ -240,18 +242,19 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
         const context = canvasRef.current.getContext('2d');
         
         if (context) {
-            // Downscale for API efficiency
-            const scale = Math.min(1, 640 / videoRef.current.videoWidth); // Increased to 640p
+            // Higher Resolution Capture for Live
+            const MAX_WIDTH = 800;
+            const scale = Math.min(1, MAX_WIDTH / videoRef.current.videoWidth); 
             canvasRef.current.width = videoRef.current.videoWidth * scale;
             canvasRef.current.height = videoRef.current.videoHeight * scale;
 
-            // Capture 100 frames over ~10 seconds (10 FPS)
+            // Capture 100 frames over ~10 seconds
             const frameCount = 100;
             const interval = 100; // ms
 
             for (let i = 0; i < frameCount; i++) {
                 context.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
-                frames.push(canvasRef.current.toDataURL('image/jpeg', 0.7));
+                frames.push(canvasRef.current.toDataURL('image/jpeg', 0.85)); // High quality
                 
                 setCaptureProgress(Math.round(((i + 1) / frameCount) * 100));
                 
@@ -424,6 +427,18 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
             // If facing user, mirror. If playing a file (videoFileSrc), NEVER mirror.
             className={`w-full h-full object-cover transition-transform ${facingMode === 'user' && !videoFileSrc ? 'scale-x-[-1]' : ''}`}
           />
+        )}
+        
+        {/* Eye Alignment Guide Overlay */}
+        {!isAnalyzing && !videoFileSrc && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+             <div className="w-48 h-32 border-2 border-dashed border-white/50 rounded-2xl flex items-center justify-center bg-black/10 backdrop-blur-[1px]">
+                <div className="flex flex-col items-center gap-1 opacity-70">
+                    <ScanEye className="text-white w-8 h-8" />
+                    <span className="text-white text-[10px] font-bold uppercase tracking-wider">{lang === 'en' ? 'Place Eye Here' : '眼睛对准此处'}</span>
+                </div>
+             </div>
+          </div>
         )}
         
         {/* Countdown Overlay */}

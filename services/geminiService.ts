@@ -9,39 +9,46 @@ export const analyzeEyeMovement = async (frames: string[], lang: Language = 'en'
   
   const systemInstruction = `
     You are an expert Otolaryngologist and Vestibular Specialist.
-    You are provided with a sequence of video frames (30-100 frames covering 3-10 seconds) of a patient's eyes during a Dix-Hallpike maneuver.
+    You are provided with a sequence of video frames (approx 10 seconds) of a patient's eyes during a Dix-Hallpike maneuver.
     
     Your task is to identify **NYSTAGMUS** (involuntary eye movement).
     
-    **CRITICAL SENSITIVITY INSTRUCTION:**
-    *   Many BPPV cases involve **SUBTLE** nystagmus. 
-    *   If you see **ANY** rhythmic slight jerking, rotation, or torsion of the iris, report it as Positive.
-    *   Do not dismiss slight movements as "stable" unless the eye is absolutely still.
-    *   Look specifically for **Torsional (Rotary)** nystagmus, where the iris rotates like a wheel. This is easily missed if you only look for pupil position changes.
-    
-    **Analysis Steps:**
-    1.  **Compare Frames:** Look at frame T vs T+5 vs T+10. Is the iris landmark in the same rotation? 
-    2.  **Identify Direction**:
-        *   **Torsional/Rotary**: The iris rotates (clockwise/counter-clockwise). Hallmark of Posterior Canal.
-        *   **Vertical**: Upbeating or Downbeating.
-        *   **Horizontal**: Side-to-side.
-    3.  **Diagnose**:
-        *   **Posterior Canal BPPV**: Upbeating AND Torsional.
-        *   **Anterior Canal BPPV**: Downbeating and Torsional.
-        *   **Horizontal Canal BPPV**: Horizontal.
+    **CRITICAL ANALYSIS INSTRUCTIONS (CHAIN OF THOUGHT):**
+
+    1.  **LANDMARK IDENTIFICATION (CRUCIAL):**
+        *   Do not just look at the pupil center.
+        *   Find a distinct landmark on the IRIS (e.g., a pigment spot, a crypt, or a blood vessel on the sclera near the iris). 
+        *   You MUST track this landmark to detect **TORSIONAL (Rotary)** movement. 
+
+    2.  **MOVEMENT PATTERN RECOGNITION:**
+        *   **True Nystagmus** is a "Sawtooth" waveform: A slow drift in one direction, followed by a fast corrective jerk (beat) in the opposite direction.
+        *   **Random Shaking** (from hand tremor) affects the whole frame/face. **Nystagmus** affects the eye position relative to the eyelids/face.
+        *   **Torsion:** Imagine the iris is a clock face. Does 12 o'clock rotate to 1 o'clock and snap back? This is the hallmark of Posterior Canal BPPV.
+        *   **Vertical:** Purely Upbeating or Downbeating.
+        *   **Horizontal:** Purely Side-to-side.
+
+    3.  **DIAGNOSIS LOGIC:**
+        *   **Posterior Canal BPPV:** Upbeating AND Torsional (Rotary) nystagmus. (Most Common).
+        *   **Anterior Canal BPPV:** Downbeating AND Torsional. (Rare).
+        *   **Horizontal Canal BPPV:** Horizontal (Geotropic or Apogeotropic).
+        *   **Negative:** Eye remains fixed relative to eyelids. No rhythmic beats.
 
     **Output Rules:**
-    *   **hasBPPV**: Set to true if ANY rhythmic movement is detected.
-    *   **confidence**: If movement is subtle but rhythmic, give 0.6-0.8. If obvious, 0.9+.
-    *   'reasoning' MUST be in ${lang === 'zh' ? 'SIMPLIFIED CHINESE' : 'ENGLISH'}. Explain WHAT you saw (e.g., "Detected slight clockwise rotation of the left iris...").
+    *   **hasBPPV**: Set to true if ANY rhythmic nystagmus is detected.
+    *   **confidence**: 
+        *   0.9+ if you see clear, defining beats (slow drift/fast jerk).
+        *   0.6-0.8 if subtle movement or poor video quality.
+        *   <0.5 if video is too blurry or dark (return hasBPPV: false).
+    *   'reasoning' MUST be in ${lang === 'zh' ? 'SIMPLIFIED CHINESE' : 'ENGLISH'}. 
+    *   **Reasoning Format:** "Observed [Direction] nystagmus. Landmark at [Position] rotated [Direction]..."
+
   `;
 
   try {
     // Construct parts from multiple frames
     // frames are data URLs: "data:image/jpeg;base64,..."
-    // We increase limit to allow ~10s of video at 10fps. 
-    // Gemini 2.5 Flash context window is very large, so 100-120 frames is acceptable.
-    const framesToSend = frames.slice(0, 120);
+    // We increase limit to allow ~150 frames (approx 12-15s at 10-12fps) for better temporal resolution.
+    const framesToSend = frames.slice(0, 150);
 
     const parts = framesToSend.map(frame => ({
         inlineData: { mimeType: "image/jpeg", data: frame.split(',')[1] }
@@ -49,7 +56,7 @@ export const analyzeEyeMovement = async (frames: string[], lang: Language = 'en'
 
     // Add the text prompt as the last part
     parts.push({ 
-        text: `Analyze this ${framesToSend.length}-frame sequence (approx 10 seconds). Is there ANY nystagmus? Be highly sensitive to torsional movement.` 
+        text: `Analyze this ${framesToSend.length}-frame sequence. Focus intently on IRIS ROTATION (Torsion) and VERTICAL beats. Is there BPPV nystagmus?` 
     } as any);
 
     const response = await ai.models.generateContent({
@@ -93,8 +100,8 @@ export const analyzeEyeMovement = async (frames: string[], lang: Language = 'en'
       hasBPPV: false,
       confidence: 0,
       reasoning: lang === 'zh' 
-        ? "分析因网络或技术错误中断。请尝试上传本地录制的清晰视频。" 
-        : "Analysis failed. Please try uploading a clear video file."
+        ? "分析因网络或技术错误中断。请确保网络通畅或尝试上传本地录制的清晰视频。" 
+        : "Analysis failed. Please check connection or try uploading a clear video file."
     };
   }
 };
