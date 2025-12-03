@@ -55,7 +55,20 @@ export type Language = 'en' | 'zh';
 declare global {
   namespace JSX {
     interface IntrinsicElements {
-      [elemName: string]: any;
+      group: any;
+      mesh: any;
+      meshStandardMaterial: any;
+      meshPhysicalMaterial: any;
+      meshBasicMaterial: any;
+      tubeGeometry: any;
+      sphereGeometry: any;
+      dodecahedronGeometry: any;
+      instancedMesh: any;
+      ambientLight: any;
+      spotLight: any;
+      pointLight: any;
+      directionalLight: any;
+      arrowHelper: any;
     }
   }
 }
