@@ -33,10 +33,29 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
     };
   }, [stream]);
 
-  // FIX: Attach stream to video element whenever the step is 'camera' and stream is available
+  // FIX: Attach stream to video element securely and ensure playback
   useEffect(() => {
+    let mounted = true;
     if (step === 'camera' && videoRef.current && stream) {
-      videoRef.current.srcObject = stream;
+      const video = videoRef.current;
+      video.srcObject = stream;
+      
+      // Explicitly handle playback to prevent black screen issues
+      const handleMetadata = () => {
+         if (mounted) {
+             video.play().catch(e => console.error("Video play failed:", e));
+         }
+      };
+      
+      video.addEventListener('loadedmetadata', handleMetadata);
+      
+      // Attempt to play immediately just in case metadata already loaded
+      video.play().catch(() => {}); 
+
+      return () => {
+          mounted = false;
+          video.removeEventListener('loadedmetadata', handleMetadata);
+      };
     }
   }, [step, stream]);
 
@@ -44,10 +63,13 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
     try {
       setError(null);
       const mediaStream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'user' } 
+        video: { 
+            facingMode: 'user',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+        } 
       });
       setStream(mediaStream);
-      // Note: Video ref attachment is handled by the useEffect above
     } catch (err) {
       console.error(err);
       setError("Unable to access camera. Please check permissions.");
@@ -73,33 +95,43 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
   const executeAnalysis = async () => {
     if (!videoRef.current || !canvasRef.current) return;
     
-    // Safety check: Ensure video has dimensions
-    if (videoRef.current.videoWidth === 0 || videoRef.current.videoHeight === 0) {
+    // Safety check: Ensure video has dimensions and data
+    if (videoRef.current.videoWidth === 0 || videoRef.current.videoHeight === 0 || videoRef.current.readyState < 2) {
         setError(t.cameraInactive || "Camera not ready");
         return;
     }
 
     setIsAnalyzing(true);
-    const context = canvasRef.current.getContext('2d');
-    if (context) {
-      canvasRef.current.width = videoRef.current.videoWidth;
-      canvasRef.current.height = videoRef.current.videoHeight;
-      context.drawImage(videoRef.current, 0, 0);
-      const imageBase64 = canvasRef.current.toDataURL('image/jpeg', 0.8);
-      
-      try {
-        const result = await analyzeEyeMovement(imageBase64, lang);
-        // Inject the selected side into the result if AI is unsure
-        if (result.hasBPPV && !result.side && selectedSide) {
-             result.side = selectedSide;
+    setError(null);
+    
+    try {
+        const frames: string[] = [];
+        const context = canvasRef.current.getContext('2d');
+        
+        if (context) {
+            canvasRef.current.width = videoRef.current.videoWidth;
+            canvasRef.current.height = videoRef.current.videoHeight;
+
+            // Capture 3 frames over ~1 second to detect movement
+            for (let i = 0; i < 3; i++) {
+                context.drawImage(videoRef.current, 0, 0);
+                frames.push(canvasRef.current.toDataURL('image/jpeg', 0.7));
+                if (i < 2) await new Promise(r => setTimeout(r, 300));
+            }
+            
+            const result = await analyzeEyeMovement(frames, lang);
+            
+            // Inject the selected side into the result if AI is unsure
+            if (result.hasBPPV && !result.side && selectedSide) {
+                 result.side = selectedSide;
+            }
+            onDiagnosisComplete(result);
         }
-        onDiagnosisComplete(result);
-      } catch (err) {
+    } catch (err) {
         console.error("Diagnosis error:", err);
         setError("Analysis failed. Please try again.");
-      } finally {
+    } finally {
         setIsAnalyzing(false);
-      }
     }
   };
 
