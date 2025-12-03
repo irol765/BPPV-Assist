@@ -17,8 +17,10 @@ export const translations = {
     cameraInactive: "Camera inactive",
     startCamera: "Start Camera",
     switchCamera: "Switch Camera",
+    uploadVideo: "Upload Video",
     analyzing: "Gemini AI is analyzing...",
     capturing: "Capturing Video...",
+    processingVideo: "Processing video file...",
     keepSteady: "Keep camera steady on eyes",
     instructionsTitle: "Instructions:",
     instructions: [
@@ -79,8 +81,10 @@ export const translations = {
     cameraInactive: "摄像头未启动",
     startCamera: "开启摄像头",
     switchCamera: "切换摄像头",
+    uploadVideo: "上传视频分析",
     analyzing: "Gemini AI 正在分析...",
     capturing: "正在录制眼部动态...",
+    processingVideo: "正在处理视频文件...",
     keepSteady: "请保持摄像头对准眼睛",
     instructionsTitle: "操作说明：",
     instructions: [

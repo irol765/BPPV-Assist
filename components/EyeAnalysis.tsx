@@ -1,6 +1,6 @@
 
 import React, { useRef, useState, useEffect } from 'react';
-import { Camera, RefreshCw, AlertCircle, ArrowLeft, ArrowRight, SwitchCamera } from 'lucide-react';
+import { Camera, RefreshCw, AlertCircle, ArrowLeft, ArrowRight, SwitchCamera, Upload, Film } from 'lucide-react';
 import { analyzeEyeMovement } from '../services/geminiService';
 import { DiagnosisResult, Language, Side } from '../types';
 import { translations } from '../translations';
@@ -18,8 +18,11 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isProcessingUpload, setIsProcessingUpload] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [captureProgress, setCaptureProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -81,7 +84,8 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
         video: { 
             facingMode: facingMode,
             width: { ideal: 1280 },
-            height: { ideal: 720 }
+            height: { ideal: 720 },
+            frameRate: { ideal: 30 }
         } 
       });
       setStream(mediaStream);
@@ -95,6 +99,100 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
       setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
   };
 
+  const handleUploadClick = () => {
+    if (fileInputRef.current) {
+        fileInputRef.current.click();
+    }
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Reset states
+    stopStream();
+    setIsAnalyzing(true);
+    setIsProcessingUpload(true);
+    setError(null);
+    setCaptureProgress(0);
+
+    try {
+        const videoUrl = URL.createObjectURL(file);
+        const frames = await extractFramesFromVideo(videoUrl);
+        URL.revokeObjectURL(videoUrl); // cleanup
+
+        if (frames.length < 10) {
+            throw new Error("Video too short. Please upload at least 1-2 seconds of video.");
+        }
+
+        setCaptureProgress(100);
+        await performAnalysis(frames);
+
+    } catch (e: any) {
+        console.error("Video upload processing failed:", e);
+        setError("Failed to process video. Please ensure it is a valid video file.");
+        setIsAnalyzing(false);
+        setIsProcessingUpload(false);
+        startCamera(); // Restart camera
+    }
+  };
+
+  const extractFramesFromVideo = async (videoUrl: string): Promise<string[]> => {
+      return new Promise((resolve, reject) => {
+          const video = document.createElement('video');
+          video.src = videoUrl;
+          video.muted = true;
+          video.playsInline = true;
+          video.crossOrigin = "anonymous";
+          
+          const frames: string[] = [];
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          // Limit to max 40 frames to avoid payload too large
+          const MAX_FRAMES = 40; 
+          
+          video.onloadedmetadata = async () => {
+              canvas.width = Math.min(video.videoWidth, 640); // Cap width at 640p for analysis speed
+              canvas.height = (video.videoHeight / video.videoWidth) * canvas.width;
+              
+              const duration = video.duration;
+              // If video is super long, just take the first 5 seconds
+              const analyzeDuration = Math.min(duration, 5);
+              const interval = analyzeDuration / MAX_FRAMES;
+
+              video.currentTime = 0;
+              
+              const captureFrame = async () => {
+                  if (video.currentTime > analyzeDuration || frames.length >= MAX_FRAMES) {
+                      resolve(frames);
+                      return;
+                  }
+
+                  if (ctx) {
+                      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                      frames.push(canvas.toDataURL('image/jpeg', 0.7)); // 0.7 quality
+                      
+                      // Update progress visually for the user
+                      setCaptureProgress(Math.round((frames.length / MAX_FRAMES) * 80)); 
+                  }
+                  
+                  // Seek to next frame
+                  video.currentTime += interval;
+              };
+
+              // Use 'seeked' event to ensure frame is ready
+              video.onseeked = captureFrame;
+              video.onerror = reject;
+              
+              // Start the loop
+              captureFrame();
+          };
+          
+          video.onerror = reject;
+      });
+  };
+
   const captureAndAnalyze = async () => {
     if (!videoRef.current || !canvasRef.current) return;
     
@@ -103,7 +201,7 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
       setCountdown(prev => {
         if (prev <= 1) {
           clearInterval(countInterval);
-          executeAnalysis();
+          executeLiveCapture();
           return 0;
         }
         return prev - 1;
@@ -111,7 +209,7 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
     }, 1000);
   };
 
-  const executeAnalysis = async () => {
+  const executeLiveCapture = async () => {
     if (!videoRef.current || !canvasRef.current) return;
     
     // Safety check
@@ -129,42 +227,50 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
         const context = canvasRef.current.getContext('2d');
         
         if (context) {
-            // Downscale for API efficiency while keeping enough detail for movement
-            // 480p is usually sufficient for nystagmus and saves tokens/bandwidth
-            const scale = Math.min(1, 480 / videoRef.current.videoWidth);
+            // Downscale for API efficiency
+            const scale = Math.min(1, 640 / videoRef.current.videoWidth); // Increased to 640p for better detail
             canvasRef.current.width = videoRef.current.videoWidth * scale;
             canvasRef.current.height = videoRef.current.videoHeight * scale;
 
-            // Capture 20 frames over ~2 seconds (approx 10 FPS)
-            // This creates a "video" sequence for the AI
-            const frameCount = 20;
+            // Capture 30 frames over ~3 seconds (approx 10 FPS)
+            // Increased from 20 to 30 to catch intermittent movements
+            const frameCount = 30;
             const interval = 100; // ms
 
             for (let i = 0; i < frameCount; i++) {
                 context.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
-                // Use slightly lower quality JPEG to keep payload size down
-                frames.push(canvasRef.current.toDataURL('image/jpeg', 0.6));
+                frames.push(canvasRef.current.toDataURL('image/jpeg', 0.7));
                 
                 setCaptureProgress(Math.round(((i + 1) / frameCount) * 100));
                 
                 if (i < frameCount - 1) await new Promise(r => setTimeout(r, interval));
             }
             
-            const result = await analyzeEyeMovement(frames, lang);
-            
-            // Inject the selected side into the result if AI is unsure
-            if (result.hasBPPV && !result.side && selectedSide) {
-                 result.side = selectedSide;
-            }
-            onDiagnosisComplete(result);
+            await performAnalysis(frames);
         }
     } catch (err) {
         console.error("Diagnosis error:", err);
         setError("Analysis failed. Please try again.");
-    } finally {
         setIsAnalyzing(false);
-        setCaptureProgress(0);
     }
+  };
+
+  const performAnalysis = async (frames: string[]) => {
+      try {
+        const result = await analyzeEyeMovement(frames, lang);
+        // Inject the selected side into the result if AI is unsure
+        if (result.hasBPPV && !result.side && selectedSide) {
+             result.side = selectedSide;
+        }
+        onDiagnosisComplete(result);
+      } catch (err) {
+        console.error("Gemini API Error", err);
+        setError("AI Service unavailable. Please try again.");
+      } finally {
+        setIsAnalyzing(false);
+        setIsProcessingUpload(false);
+        setCaptureProgress(0);
+      }
   };
 
   // --- Step 1: Select Side ---
@@ -252,20 +358,42 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
   // --- Step 4: Camera & Analysis ---
   return (
     <div className="flex flex-col items-center w-full max-w-md mx-auto p-4 bg-white rounded-2xl shadow-lg border border-slate-100">
+      
+      {/* Hidden File Input */}
+      <input 
+          type="file" 
+          ref={fileInputRef} 
+          accept="video/*" 
+          className="hidden" 
+          onChange={handleFileChange}
+      />
+
       <div className="flex items-center justify-between w-full mb-4">
         <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
             <Camera className="w-6 h-6 text-medical-600" />
             {t.nystagmusAnalysis}
         </h2>
         
-        <button 
-            onClick={toggleCamera} 
-            disabled={isAnalyzing}
-            className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 text-slate-600 transition"
-            title={t.switchCamera}
-        >
-            <SwitchCamera size={20} />
-        </button>
+        <div className="flex gap-2">
+            {/* Upload Button */}
+            <button 
+                onClick={handleUploadClick}
+                disabled={isAnalyzing}
+                className="p-2 bg-slate-100 rounded-full hover:bg-blue-50 text-slate-600 hover:text-blue-600 transition border border-transparent hover:border-blue-200"
+                title={t.uploadVideo}
+            >
+                <Upload size={20} />
+            </button>
+            {/* Camera Switch */}
+            <button 
+                onClick={toggleCamera} 
+                disabled={isAnalyzing}
+                className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 text-slate-600 transition"
+                title={t.switchCamera}
+            >
+                <SwitchCamera size={20} />
+            </button>
+        </div>
       </div>
       
       <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden mb-4 shadow-inner">
@@ -299,8 +427,10 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
                 
                 {captureProgress < 100 ? (
                     <div className="flex flex-col items-center">
-                        <p className="text-white font-bold text-lg mb-2">{t.capturing} {captureProgress}%</p>
-                        <p className="text-white/70 text-sm">{t.keepSteady}</p>
+                        <p className="text-white font-bold text-lg mb-2">
+                            {isProcessingUpload ? t.processingVideo : t.capturing} {captureProgress}%
+                        </p>
+                        <p className="text-white/70 text-sm">{isProcessingUpload ? "" : t.keepSteady}</p>
                     </div>
                 ) : (
                     <p className="text-white font-medium animate-pulse">{t.analyzing}</p>
@@ -318,18 +448,32 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
         </div>
       )}
 
-      <button 
-        onClick={captureAndAnalyze}
-        disabled={!stream || isAnalyzing || countdown > 0}
-        className={`w-full py-4 rounded-xl font-bold text-lg shadow-md transition flex items-center justify-center gap-2
-          ${!stream || isAnalyzing 
-            ? 'bg-slate-300 text-slate-500 cursor-not-allowed' 
-            : 'bg-red-500 text-white hover:bg-red-600 hover:shadow-lg active:scale-95'
-          }`}
-      >
-        <div className={`w-3 h-3 bg-white rounded-full ${isAnalyzing ? '' : 'animate-pulse'}`} />
-        {t.analyzeButton}
-      </button>
+      {/* Main Action Buttons */}
+      <div className="grid grid-cols-5 gap-3 w-full">
+          {/* Capture Button */}
+          <button 
+            onClick={captureAndAnalyze}
+            disabled={!stream || isAnalyzing || countdown > 0}
+            className={`col-span-3 py-4 rounded-xl font-bold text-lg shadow-md transition flex items-center justify-center gap-2
+              ${!stream || isAnalyzing 
+                ? 'bg-slate-300 text-slate-500 cursor-not-allowed' 
+                : 'bg-red-500 text-white hover:bg-red-600 hover:shadow-lg active:scale-95'
+              }`}
+          >
+            <div className={`w-3 h-3 bg-white rounded-full ${isAnalyzing ? '' : 'animate-pulse'}`} />
+            {t.analyzeButton}
+          </button>
+
+          {/* Upload Button (Primary style for this step too) */}
+          <button 
+              onClick={handleUploadClick}
+              disabled={isAnalyzing}
+              className="col-span-2 py-4 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-700 transition shadow-md flex items-center justify-center gap-2"
+          >
+              <Film size={20} />
+              {lang === 'en' ? 'Upload' : '上传'}
+          </button>
+      </div>
 
       <button onClick={() => { setStep('side-select'); }} disabled={isAnalyzing} className="mt-4 text-slate-400 text-sm hover:text-slate-600">
           {t.exit}

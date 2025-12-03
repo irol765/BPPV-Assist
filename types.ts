@@ -1,4 +1,5 @@
 
+
 export enum CanalType {
   POSTERIOR = 'Posterior',
   HORIZONTAL = 'Horizontal',
@@ -55,20 +56,8 @@ export type Language = 'en' | 'zh';
 declare global {
   namespace JSX {
     interface IntrinsicElements {
-      group: any;
-      mesh: any;
-      meshStandardMaterial: any;
-      meshPhysicalMaterial: any;
-      meshBasicMaterial: any;
-      tubeGeometry: any;
-      sphereGeometry: any;
-      dodecahedronGeometry: any;
-      instancedMesh: any;
-      ambientLight: any;
-      spotLight: any;
-      pointLight: any;
-      directionalLight: any;
-      arrowHelper: any;
+      // Catch-all to allow any React Three Fiber elements
+      [elemName: string]: any;
     }
   }
 }
