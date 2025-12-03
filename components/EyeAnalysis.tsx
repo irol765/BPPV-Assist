@@ -21,6 +21,8 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [videoFileSrc, setVideoFileSrc] = useState<string | null>(null);
+
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isProcessingUpload, setIsProcessingUpload] = useState(false);
   const [countdown, setCountdown] = useState(0);
@@ -29,7 +31,7 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
   
   const t = translations[lang];
 
-  // Cleanup stream on unmount or re-init
+  // Cleanup function
   const stopStream = () => {
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
@@ -41,43 +43,40 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
     return stopStream;
   }, []);
 
-  // Effect to handle camera stream based on step and facingMode
+  // --- Video Source Management ---
+  // We use the SAME video element for both Camera Stream and File Upload
+  // to ensure the browser actually renders the frames (avoiding black screens).
   useEffect(() => {
-    if (step === 'camera') {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (stream) {
+        // Camera Mode
+        video.src = "";
+        video.srcObject = stream;
+        video.play().catch(e => console.error("Stream play error:", e));
+    } else if (videoFileSrc) {
+        // Upload Mode
+        video.srcObject = null;
+        video.src = videoFileSrc;
+        // We don't auto-play here; the processing function will handle seeking
+    }
+  }, [stream, videoFileSrc]);
+
+
+  // Initialize Camera when entering camera step
+  useEffect(() => {
+    if (step === 'camera' && !videoFileSrc) {
         startCamera();
     } else {
         stopStream();
     }
   }, [step, facingMode]);
 
-  // FIX: Attach stream to video element securely and ensure playback
-  useEffect(() => {
-    let mounted = true;
-    if (step === 'camera' && videoRef.current && stream) {
-      const video = videoRef.current;
-      video.srcObject = stream;
-      
-      // Explicitly handle playback to prevent black screen issues
-      const handleMetadata = () => {
-         if (mounted) {
-             video.play().catch(e => console.error("Video play failed:", e));
-         }
-      };
-      
-      video.addEventListener('loadedmetadata', handleMetadata);
-      
-      // Attempt to play immediately just in case metadata already loaded
-      video.play().catch(() => {}); 
-
-      return () => {
-          mounted = false;
-          video.removeEventListener('loadedmetadata', handleMetadata);
-      };
-    }
-  }, [step, stream]);
 
   const startCamera = async () => {
     stopStream();
+    setVideoFileSrc(null); // Clear any file
     try {
       setError(null);
       const mediaStream = await navigator.mediaDevices.getUserMedia({ 
@@ -101,6 +100,7 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
 
   const handleUploadClick = () => {
     if (fileInputRef.current) {
+        fileInputRef.current.value = ''; // Reset input
         fileInputRef.current.click();
     }
   };
@@ -109,125 +109,101 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Reset states
-    stopStream();
+    // 1. Prepare UI
+    stopStream(); 
     setIsAnalyzing(true);
     setIsProcessingUpload(true);
     setError(null);
     setCaptureProgress(0);
 
-    try {
-        const videoUrl = URL.createObjectURL(file);
-        const frames = await extractFramesFromVideo(videoUrl);
-        URL.revokeObjectURL(videoUrl); // cleanup
+    // 2. Load Video into Main Element
+    const videoUrl = URL.createObjectURL(file);
+    setVideoFileSrc(videoUrl);
 
-        if (frames.length < 10) {
-            throw new Error("Video too short. Please upload at least 1-2 seconds of video.");
-        }
-
-        setCaptureProgress(100);
-        await performAnalysis(frames);
-
-    } catch (e: any) {
-        console.error("Video upload processing failed:", e);
-        setError("Failed to process video. Please ensure it is a valid video file.");
-        setIsAnalyzing(false);
-        setIsProcessingUpload(false);
-        startCamera(); // Restart camera
-    }
+    // 3. Trigger processing once video is ready
+    // We wait a brief moment for React to update the DOM with the new src
+    setTimeout(() => {
+        processVideoOnMainElement(videoUrl);
+    }, 500);
   };
 
-  const extractFramesFromVideo = async (videoUrl: string): Promise<string[]> => {
-      return new Promise(async (resolve, reject) => {
-          const video = document.createElement('video');
-          video.src = videoUrl;
-          video.muted = true;
-          video.playsInline = true;
-          video.crossOrigin = "anonymous";
-          
-          // FIX FOR BLACK FRAMES:
-          // 1. Element must be in DOM.
-          // 2. Element should be technically "visible" (even if transparent) for renderer to paint frames.
-          video.style.position = 'fixed';
-          video.style.zIndex = '-1000';
-          video.style.top = '0';
-          video.style.left = '0';
-          video.style.width = '10px';
-          video.style.height = '10px';
-          video.style.opacity = '0'; // Invisible but present
-          video.style.pointerEvents = 'none';
-          
-          document.body.appendChild(video);
-          
-          const frames: string[] = [];
-          const canvas = document.createElement('canvas');
+  const processVideoOnMainElement = async (url: string) => {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      
+      if (!video || !canvas) {
+          setError("Video element missing");
+          setIsAnalyzing(false);
+          setIsProcessingUpload(false);
+          return;
+      }
+
+      try {
           const ctx = canvas.getContext('2d', { willReadFrequently: true });
-          
-          const MAX_DURATION = 10; 
-          const FPS = 10;
-          
-          const onLoaded = async () => {
-              try {
-                  if (!ctx) throw new Error("Canvas context missing");
+          if (!ctx) throw new Error("No canvas context");
 
-                  canvas.width = Math.min(video.videoWidth, 640);
-                  canvas.height = (video.videoHeight / video.videoWidth) * canvas.width;
-                  
-                  // Force decoder wake-up
-                  try {
-                    await video.play();
-                    video.pause();
-                  } catch (e) {
-                     console.debug("Autoplay prevented, continuing", e);
-                  }
-
-                  const duration = (!video.duration || video.duration === Infinity) ? 10 : video.duration;
-                  const analyzeDuration = Math.min(duration, MAX_DURATION);
-                  const totalFrames = Math.floor(analyzeDuration * FPS);
-                  const timeInterval = 1 / FPS;
-
-                  for (let i = 0; i < totalFrames; i++) {
-                      const targetTime = i * timeInterval;
-                      
-                      video.currentTime = targetTime;
-                      
-                      // Wait for seeked event
-                      await new Promise<void>((r) => {
-                          const h = () => { video.removeEventListener('seeked', h); r(); };
-                          video.addEventListener('seeked', h);
-                          // Backup timeout if seeked doesn't fire
-                          setTimeout(h, 500);
-                      });
-                      
-                      // CRITICAL: Double rAF to ensure frame is painted to video element
-                      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-
-                      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                      frames.push(canvas.toDataURL('image/jpeg', 0.7)); 
-                      
-                      setCaptureProgress(Math.round(((i + 1) / totalFrames) * 80)); 
-                  }
-                  
-                  resolve(frames);
-
-              } catch (e) {
-                  reject(e);
-              } finally {
-                  if (document.body.contains(video)) {
-                      document.body.removeChild(video);
-                  }
+          // Wait for metadata
+          await new Promise<void>((resolve, reject) => {
+              if (video.readyState >= 1) resolve();
+              else {
+                  video.onloadedmetadata = () => resolve();
+                  video.onerror = () => reject(new Error("Video load failed"));
               }
-          };
+          });
 
-          video.onloadedmetadata = onLoaded;
-          video.onerror = (e) => {
-              if (document.body.contains(video)) document.body.removeChild(video);
-              reject(new Error("Video load failed"));
-          };
+          // Set dimensions
+          canvas.width = Math.min(video.videoWidth, 640);
+          canvas.height = (video.videoHeight / video.videoWidth) * canvas.width;
+
+          // Wake up decoder
+          try {
+              await video.play();
+              video.pause();
+          } catch(e) { console.log("Autoplay blocked, continuing..."); }
+
+          const duration = (!video.duration || video.duration === Infinity) ? 10 : video.duration;
+          const analyzeDuration = Math.min(duration, 10); // Cap at 10s
+          const FPS = 10;
+          const totalFrames = Math.floor(analyzeDuration * FPS);
+          const frames: string[] = [];
+
+          for (let i = 0; i < totalFrames; i++) {
+              const targetTime = i * (1 / FPS);
+              video.currentTime = targetTime;
+
+              // Wait for seek
+              await new Promise<void>(resolve => {
+                  const onSeek = () => {
+                      video.removeEventListener('seeked', onSeek);
+                      resolve();
+                  };
+                  video.addEventListener('seeked', onSeek);
+                  // Backup timeout if seeked doesn't fire
+                  setTimeout(onSeek, 500); 
+              });
+
+              // Force paint wait
+              await new Promise(r => requestAnimationFrame(r));
+              
+              ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+              frames.push(canvas.toDataURL('image/jpeg', 0.7));
+              
+              setCaptureProgress(Math.round(((i + 1) / totalFrames) * 80));
+          }
+
+          // Processing Done
+          setCaptureProgress(100);
+          URL.revokeObjectURL(url);
           
-          // Trigger load
-          video.load();
-      });
+          await performAnalysis(frames);
+
+      } catch (err) {
+          console.error("Processing failed:", err);
+          setError("Failed to process video file.");
+          setIsAnalyzing(false);
+          setIsProcessingUpload(false);
+          startCamera(); // Reset to camera
+      }
   };
 
   const captureAndAnalyze = async () => {
@@ -265,7 +241,7 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
         
         if (context) {
             // Downscale for API efficiency
-            const scale = Math.min(1, 640 / videoRef.current.videoWidth); // Increased to 640p for better detail
+            const scale = Math.min(1, 640 / videoRef.current.videoWidth); // Increased to 640p
             canvasRef.current.width = videoRef.current.videoWidth * scale;
             canvasRef.current.height = videoRef.current.videoHeight * scale;
 
@@ -306,6 +282,7 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
         setIsAnalyzing(false);
         setIsProcessingUpload(false);
         setCaptureProgress(0);
+        // Don't auto-restart camera here, let the user see the result screen
       }
   };
 
@@ -423,8 +400,8 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
             {/* Camera Switch */}
             <button 
                 onClick={toggleCamera} 
-                disabled={isAnalyzing}
-                className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 text-slate-600 transition"
+                disabled={isAnalyzing || !!videoFileSrc}
+                className={`p-2 bg-slate-100 rounded-full hover:bg-slate-200 text-slate-600 transition ${!!videoFileSrc ? 'opacity-50 cursor-not-allowed' : ''}`}
                 title={t.switchCamera}
             >
                 <SwitchCamera size={20} />
@@ -432,8 +409,9 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
         </div>
       </div>
       
-      <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden mb-4 shadow-inner">
-        {!stream ? (
+      <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden mb-4 shadow-inner transform-gpu">
+        {/* State: No Stream and No File */}
+        {!stream && !videoFileSrc ? (
           <div className="absolute inset-0 flex items-center justify-center">
              <RefreshCw className="animate-spin text-slate-500" />
           </div>
@@ -443,20 +421,21 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
             autoPlay 
             playsInline 
             muted
-            className={`w-full h-full object-cover transition-transform ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`}
+            // If facing user, mirror. If playing a file (videoFileSrc), NEVER mirror.
+            className={`w-full h-full object-cover transition-transform ${facingMode === 'user' && !videoFileSrc ? 'scale-x-[-1]' : ''}`}
           />
         )}
         
         {/* Countdown Overlay */}
         {countdown > 0 && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-10">
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-30">
             <span className="text-6xl font-bold text-white animate-bounce">{countdown}</span>
           </div>
         )}
 
         {/* Capturing / Analyzing Overlay */}
         {isAnalyzing && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm z-20">
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 backdrop-blur-md z-40 transition-opacity duration-300">
                 <div className="w-16 h-16 relative flex items-center justify-center mb-4">
                      <RefreshCw className="w-10 h-10 text-white animate-spin absolute" />
                 </div>
@@ -466,7 +445,9 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
                         <p className="text-white font-bold text-lg mb-2">
                             {isProcessingUpload ? t.processingVideo : t.capturing} {captureProgress}%
                         </p>
-                        <p className="text-white/70 text-sm">{isProcessingUpload ? "" : t.keepSteady}</p>
+                        <p className="text-white/70 text-sm text-center px-4">
+                             {isProcessingUpload ? "Extracting frames..." : t.keepSteady}
+                        </p>
                     </div>
                 ) : (
                     <p className="text-white font-medium animate-pulse">{t.analyzing}</p>
@@ -484,7 +465,7 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
         </div>
       )}
 
-      {/* Main Action Buttons - Stack on mobile, side-by-side on larger */}
+      {/* Main Action Buttons */}
       <div className="flex flex-col gap-3 w-full">
           {/* Capture Button */}
           <button 

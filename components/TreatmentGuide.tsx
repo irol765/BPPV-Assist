@@ -168,13 +168,13 @@ const TreatmentGuide: React.FC<TreatmentGuideProps> = ({ maneuver, onComplete, o
         </div>
 
         {/* Action Controls */}
-        <div className="p-2 md:p-5 border-t border-slate-200 bg-slate-50 safe-pb">
+        <div className="p-3 md:p-5 border-t border-slate-200 bg-slate-50 safe-pb">
             <div className="flex items-stretch gap-2 md:gap-4 h-14 md:h-20">
                 
                 {/* Back Button */}
                 <button 
                     onClick={handlePrev}
-                    className="w-10 md:w-16 flex items-center justify-center rounded-xl md:rounded-2xl border border-slate-200 text-slate-400 hover:bg-white active:scale-95 transition bg-white"
+                    className="w-12 md:w-16 flex-none flex items-center justify-center rounded-xl md:rounded-2xl border border-slate-200 text-slate-400 hover:bg-white active:scale-95 transition bg-white"
                 >
                     <ChevronLeft size={24} />
                 </button>
@@ -183,7 +183,7 @@ const TreatmentGuide: React.FC<TreatmentGuideProps> = ({ maneuver, onComplete, o
                 <button 
                     onClick={() => setIsTimerRunning(!isTimerRunning)}
                     className={`
-                        relative flex-1 rounded-xl md:rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 overflow-hidden
+                        relative flex-1 min-w-0 rounded-xl md:rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 overflow-hidden
                         ${isTimerDone 
                             ? 'bg-slate-200 text-slate-500 border border-slate-200' 
                             : isTimerRunning 
@@ -199,7 +199,7 @@ const TreatmentGuide: React.FC<TreatmentGuideProps> = ({ maneuver, onComplete, o
                             />
                     )}
 
-                    <div className="relative flex items-center gap-2 z-10">
+                    <div className="relative flex items-center gap-1 md:gap-2 z-10 px-1">
                         {isTimerDone ? (
                             <Check size={24} />
                         ) : (
@@ -212,10 +212,10 @@ const TreatmentGuide: React.FC<TreatmentGuideProps> = ({ maneuver, onComplete, o
                     </div>
                 </button>
 
-                {/* Reset (Tiny) */}
+                {/* Reset (Small) */}
                 <button 
                         onClick={() => { setTimer(step.durationSeconds); setIsTimerRunning(false); }}
-                        className="w-10 md:w-12 rounded-xl md:rounded-2xl bg-white border border-slate-200 text-slate-400 hover:text-slate-600 flex items-center justify-center"
+                        className="w-10 md:w-12 flex-none rounded-xl md:rounded-2xl bg-white border border-slate-200 text-slate-400 hover:text-slate-600 flex items-center justify-center"
                 >
                     <RotateCcw size={18} />
                 </button>
@@ -224,7 +224,7 @@ const TreatmentGuide: React.FC<TreatmentGuideProps> = ({ maneuver, onComplete, o
                 <button 
                     onClick={handleNext}
                     className={`
-                        px-3 md:px-6 rounded-xl md:rounded-2xl font-bold text-white flex items-center justify-center gap-1 transition-all active:scale-95 min-w-[3rem]
+                        px-3 md:px-6 flex-none rounded-xl md:rounded-2xl font-bold text-white flex items-center justify-center gap-1 transition-all active:scale-95
                         ${isTimerDone 
                             ? 'bg-medical-600 hover:bg-medical-700 shadow-lg shadow-medical-200 ring-2 ring-medical-100' 
                             : 'bg-slate-800 hover:bg-slate-700 opacity-90'
