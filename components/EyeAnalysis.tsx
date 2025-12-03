@@ -139,6 +139,7 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
       }
 
       try {
+          // IMPORTANT: Use willReadFrequently to signal browser optimization
           const ctx = canvas.getContext('2d', { willReadFrequently: true });
           if (!ctx) throw new Error("No canvas context");
 
@@ -152,16 +153,15 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
           });
 
           // Set dimensions - Higher Resolution for better accuracy
-          // Limit max width to 800px to balance quality vs token usage/speed
           const MAX_WIDTH = 800; 
           canvas.width = Math.min(video.videoWidth, MAX_WIDTH);
           canvas.height = (video.videoHeight / video.videoWidth) * canvas.width;
 
-          // Wake up decoder
+          // Wake up decoder by playing briefly
           try {
               await video.play();
               video.pause();
-          } catch(e) { console.log("Autoplay blocked, continuing..."); }
+          } catch(e) { console.log("Autoplay blocked, continuing...", e); }
 
           const duration = (!video.duration || video.duration === Infinity) ? 10 : video.duration;
           const analyzeDuration = Math.min(duration, 10); // Cap at 10s
@@ -170,22 +170,23 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
           const frames: string[] = [];
 
           for (let i = 0; i < totalFrames; i++) {
-              const targetTime = i * (1 / FPS);
+              const targetTime = Math.min(i * (1 / FPS), duration - 0.1); // Clamp to avoid seeking past end
               video.currentTime = targetTime;
 
-              // Wait for seek
+              // Wait for seek to complete
               await new Promise<void>(resolve => {
                   const onSeek = () => {
                       video.removeEventListener('seeked', onSeek);
                       resolve();
                   };
                   video.addEventListener('seeked', onSeek);
-                  // Backup timeout if seeked doesn't fire
-                  setTimeout(onSeek, 500); 
+                  // Backup timeout if seeked doesn't fire fast enough
+                  setTimeout(onSeek, 300); 
               });
 
-              // Force paint wait
-              await new Promise(r => requestAnimationFrame(r));
+              // CRITICAL: Force paint wait (Double RAF)
+              // This gives the GPU time to paint the new video frame before we draw it
+              await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
               
               ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
               frames.push(canvas.toDataURL('image/jpeg', 0.85)); // Higher quality JPEG
@@ -239,7 +240,7 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
     
     try {
         const frames: string[] = [];
-        const context = canvasRef.current.getContext('2d');
+        const context = canvasRef.current.getContext('2d', { willReadFrequently: true });
         
         if (context) {
             // Higher Resolution Capture for Live
@@ -423,6 +424,8 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
             ref={videoRef} 
             autoPlay 
             playsInline 
+            // @ts-ignore
+            webkit-playsinline="true"
             muted
             // If facing user, mirror. If playing a file (videoFileSrc), NEVER mirror.
             className={`w-full h-full object-cover transition-transform ${facingMode === 'user' && !videoFileSrc ? 'scale-x-[-1]' : ''}`}
@@ -471,7 +474,26 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
         )}
       </div>
 
-      <canvas ref={canvasRef} className="hidden" />
+      {/* 
+         CRITICAL FIX: 
+         Do NOT use className="hidden" or display: none. 
+         Mobile browsers (iOS) will return black pixels for getContext().drawImage() if the canvas is not in the layout.
+         Instead, position it off-screen fixed or absolute with z-index behind.
+      */}
+      <canvas 
+        ref={canvasRef} 
+        style={{ 
+            position: 'absolute', 
+            top: 0, 
+            left: 0, 
+            opacity: 0, 
+            pointerEvents: 'none', 
+            zIndex: -1,
+            // Ensure it has some dimension so it's not culled
+            width: '1px',
+            height: '1px'
+        }} 
+      />
 
       {error && (
         <div className="w-full p-3 bg-red-50 text-red-700 rounded-lg flex items-center gap-2 mb-4 text-sm border border-red-100">
