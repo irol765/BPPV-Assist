@@ -3,7 +3,7 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { RoundedBox, Sphere, Cylinder, Box, ContactShadows, OrbitControls, Plane, Environment } from '@react-three/drei';
 import * as THREE from 'three';
 
-// Fix for React Three Fiber intrinsic elements not being recognized
+// Fix for missing R3F types in this file context
 declare global {
   namespace JSX {
     interface IntrinsicElements {
@@ -12,16 +12,11 @@ declare global {
       meshStandardMaterial: any;
       meshPhysicalMaterial: any;
       meshBasicMaterial: any;
-      tubeGeometry: any;
-      dodecahedronGeometry: any;
-      sphereGeometry: any;
-      instancedMesh: any;
-      arrowHelper: any;
       ambientLight: any;
+      directionalLight: any;
       spotLight: any;
       pointLight: any;
-      directionalLight: any;
-      [elemName: string]: any;
+      primitive: any;
     }
   }
 }
@@ -258,7 +253,7 @@ const Scene: React.FC<HumanModelProps> = ({ torsoAngle, bodyRoll, bodyYaw = 0, h
 const HumanModel: React.FC<HumanModelProps> = (props) => {
   return (
     <div className="w-full h-full bg-slate-50 cursor-move">
-      <Canvas shadows camera={{ position: [3.5, 2.5, 3.5], fov: 30 }}>
+      <Canvas shadows camera={{ position: [5.5, 4, 5.5], fov: 30 }}>
         <Environment preset="studio" />
         <ambientLight intensity={0.4} />
         <directionalLight position={[-5, 5, 5]} intensity={0.8} castShadow shadow-bias={-0.0001} />
@@ -268,7 +263,7 @@ const HumanModel: React.FC<HumanModelProps> = (props) => {
             maxPolarAngle={Math.PI / 1.9}
             enablePan={false}
             enableZoom={true}
-            maxDistance={10}
+            maxDistance={12}
             minDistance={3}
         />
       </Canvas>

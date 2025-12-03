@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { Activity, Brain, Rotate3D, ShieldCheck, Globe } from 'lucide-react';
+import { Activity, Brain, Rotate3D, ShieldCheck, Globe, ArrowLeft, ChevronRight } from 'lucide-react';
 import EyeAnalysis from './components/EyeAnalysis';
 import TreatmentGuide from './components/TreatmentGuide';
 import { DiagnosisResult, Maneuver, CanalType, Side, Language } from './types';
@@ -10,7 +11,8 @@ enum AppState {
   HOME,
   DIAGNOSIS,
   RESULT,
-  TREATMENT
+  TREATMENT,
+  SIDE_SELECT
 }
 
 const App: React.FC = () => {
@@ -79,7 +81,7 @@ const App: React.FC = () => {
         </button>
 
         <button 
-          onClick={() => startTreatment(MANEUVERS.EPLEY_RIGHT)} // Defaulting to right for the 'Direct' button example
+          onClick={() => setAppState(AppState.SIDE_SELECT)}
           className="flex items-center p-4 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition group text-left"
         >
            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-600 group-hover:bg-slate-800 group-hover:text-white transition mr-4 flex-shrink-0">
@@ -98,11 +100,48 @@ const App: React.FC = () => {
     </div>
   );
 
+  const renderSideSelect = () => (
+    <div className="flex flex-col items-center justify-center min-h-screen p-6 relative">
+      <button 
+        onClick={() => setAppState(AppState.HOME)} 
+        className="absolute top-6 left-6 p-2 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition"
+      >
+        <ArrowLeft size={24} />
+      </button>
+
+      <h2 className="text-2xl font-bold text-slate-900 mb-8">{t.selectSide}</h2>
+      
+      <div className="grid gap-4 w-full max-w-sm">
+        <button 
+          onClick={() => startTreatment(MANEUVERS.EPLEY_LEFT)}
+          className="flex items-center justify-between p-6 bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:border-medical-500 transition group"
+        >
+          <div className="flex flex-col text-left">
+             <span className="font-bold text-xl text-slate-800">{t.repositionLeft}</span>
+             <span className="text-sm text-slate-500">Left Ear</span>
+          </div>
+          <ChevronRight className="text-slate-300 group-hover:text-medical-600 w-6 h-6" />
+        </button>
+
+        <button 
+          onClick={() => startTreatment(MANEUVERS.EPLEY_RIGHT)}
+          className="flex items-center justify-between p-6 bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:border-medical-500 transition group"
+        >
+           <div className="flex flex-col text-left">
+             <span className="font-bold text-xl text-slate-800">{t.repositionRight}</span>
+             <span className="text-sm text-slate-500">Right Ear</span>
+          </div>
+           <ChevronRight className="text-slate-300 group-hover:text-medical-600 w-6 h-6" />
+        </button>
+      </div>
+    </div>
+  );
+
   const renderDiagnosis = () => (
     <div className="min-h-screen bg-slate-50 pt-10 px-4">
         <div className="max-w-md mx-auto">
             <button onClick={() => setAppState(AppState.HOME)} className="mb-6 text-slate-500 flex items-center gap-1 hover:text-slate-800">
-                &larr; {t.backHome}
+                <ArrowLeft size={20} /> {t.backHome}
             </button>
             <h2 className="text-2xl font-bold text-slate-900 mb-2">{t.nystagmusAnalysis}</h2>
             <p className="text-slate-600 mb-6">{t.nystagmusAnalysisDesc}</p>
@@ -187,6 +226,7 @@ const App: React.FC = () => {
       {appState === AppState.HOME && renderHome()}
       {appState === AppState.DIAGNOSIS && renderDiagnosis()}
       {appState === AppState.RESULT && renderResult()}
+      {appState === AppState.SIDE_SELECT && renderSideSelect()}
       {appState === AppState.TREATMENT && selectedManeuver && (
         <TreatmentGuide 
           maneuver={selectedManeuver}

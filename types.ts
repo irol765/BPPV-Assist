@@ -72,8 +72,7 @@ declare global {
       pointLight: any;
       directionalLight: any;
       
-      // Catch-all to allow any other React Three Fiber elements
-      [elemName: string]: any;
+      // Removed catch-all index signature to avoid 'Duplicate index signature' error
     }
   }
 }

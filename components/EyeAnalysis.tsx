@@ -453,32 +453,37 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
 
         {/* Capturing / Analyzing Overlay */}
         {isAnalyzing && (
-            <div className={`absolute inset-0 flex flex-col items-center justify-center z-40 transition-all duration-300 ${
-                (!isProcessingUpload && captureProgress < 100) 
-                    ? 'bg-transparent' 
-                    : 'bg-black/90 backdrop-blur-md'
-            }`}>
-                {/* Inner container: Adds contrast background only during live capture so text is readable without blocking view */}
-                <div className={`flex flex-col items-center justify-center p-6 rounded-2xl transition-all ${
-                    (!isProcessingUpload && captureProgress < 100) 
-                        ? 'bg-black/60 backdrop-blur-sm shadow-xl border border-white/10' 
-                        : ''
-                }`}>
-                    <div className="w-16 h-16 relative flex items-center justify-center mb-4">
-                        <RefreshCw className="w-10 h-10 text-white animate-spin absolute" />
+            <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
+                {/* Backdrop - Visible ONLY when processing upload or analyzing (capture done) */}
+                {/* When capturing live (captureProgress < 100 && !upload), keep it fully transparent to see video */}
+                <div 
+                    className={`absolute inset-0 transition-opacity duration-300 ${
+                        (!isProcessingUpload && captureProgress < 100) 
+                            ? 'bg-transparent opacity-0' 
+                            : 'bg-black/80 backdrop-blur-sm opacity-100'
+                    }`} 
+                />
+
+                {/* Status Box - Always visible during this state */}
+                <div className="relative z-10 bg-slate-900/90 backdrop-blur-md p-6 rounded-2xl flex flex-col items-center shadow-2xl border border-white/10 max-w-[80%] pointer-events-auto">
+                    <div className="w-12 h-12 relative flex items-center justify-center mb-4">
+                        <RefreshCw className="w-8 h-8 text-medical-400 animate-spin absolute" />
                     </div>
                     
                     {captureProgress < 100 ? (
                         <div className="flex flex-col items-center">
-                            <p className="text-white font-bold text-lg mb-2">
+                            <p className="text-white font-bold text-lg mb-1 tabular-nums">
                                 {isProcessingUpload ? t.processingVideo : t.capturing} {captureProgress}%
                             </p>
-                            <p className="text-white/70 text-sm text-center px-4 whitespace-nowrap">
-                                {isProcessingUpload ? "Extracting frames..." : t.keepSteady}
+                            <p className="text-slate-300 text-xs text-center">
+                                {isProcessingUpload ? "Analyzing frames..." : t.keepSteady}
                             </p>
                         </div>
                     ) : (
-                        <p className="text-white font-medium animate-pulse">{t.analyzing}</p>
+                        <div className="flex flex-col items-center animate-pulse">
+                            <p className="text-white font-bold text-lg mb-1">{t.analyzing}</p>
+                            <p className="text-slate-300 text-xs">AI Processing...</p>
+                        </div>
                     )}
                 </div>
             </div>
