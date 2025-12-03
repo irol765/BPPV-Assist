@@ -138,58 +138,92 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
   };
 
   const extractFramesFromVideo = async (videoUrl: string): Promise<string[]> => {
-      return new Promise((resolve, reject) => {
+      return new Promise(async (resolve, reject) => {
+          // Create video element
           const video = document.createElement('video');
           video.src = videoUrl;
           video.muted = true;
           video.playsInline = true;
           video.crossOrigin = "anonymous";
           
+          // Critical: Append to body (hidden) so browser processes events correctly
+          // Detached video elements often have throttled or broken seeking in some browsers
+          video.style.position = 'fixed';
+          video.style.top = '-9999px';
+          video.style.left = '-9999px';
+          document.body.appendChild(video);
+          
           const frames: string[] = [];
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
           
-          // Limit to max 40 frames to avoid payload too large
-          const MAX_FRAMES = 40; 
+          // Target 10 seconds at 10 FPS
+          const MAX_DURATION = 10; 
+          const FPS = 10;
           
-          video.onloadedmetadata = async () => {
-              canvas.width = Math.min(video.videoWidth, 640); // Cap width at 640p for analysis speed
-              canvas.height = (video.videoHeight / video.videoWidth) * canvas.width;
-              
-              const duration = video.duration;
-              // If video is super long, just take the first 5 seconds
-              const analyzeDuration = Math.min(duration, 5);
-              const interval = analyzeDuration / MAX_FRAMES;
+          const onLoaded = async () => {
+              try {
+                  if (!ctx) throw new Error("Canvas context missing");
 
-              video.currentTime = 0;
-              
-              const captureFrame = async () => {
-                  if (video.currentTime > analyzeDuration || frames.length >= MAX_FRAMES) {
-                      resolve(frames);
-                      return;
-                  }
+                  canvas.width = Math.min(video.videoWidth, 640);
+                  canvas.height = (video.videoHeight / video.videoWidth) * canvas.width;
+                  
+                  // Use duration or fallback if infinity
+                  const duration = (!video.duration || video.duration === Infinity) ? 10 : video.duration;
+                  const analyzeDuration = Math.min(duration, MAX_DURATION);
+                  const totalFrames = Math.floor(analyzeDuration * FPS);
+                  const timeInterval = 1 / FPS;
 
-                  if (ctx) {
-                      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                      frames.push(canvas.toDataURL('image/jpeg', 0.7)); // 0.7 quality
+                  for (let i = 0; i < totalFrames; i++) {
+                      const targetTime = i * timeInterval;
                       
-                      // Update progress visually for the user
-                      setCaptureProgress(Math.round((frames.length / MAX_FRAMES) * 80)); 
+                      // Reliable seek with timeout safety
+                      await new Promise<void>((seekResolve) => {
+                          let resolved = false;
+                          const onSeeked = () => {
+                              if (resolved) return;
+                              resolved = true;
+                              video.removeEventListener('seeked', onSeeked);
+                              seekResolve();
+                          };
+                          
+                          video.addEventListener('seeked', onSeeked);
+                          video.currentTime = targetTime;
+                          
+                          // Fallback if event doesn't fire (prevents hanging at 2%)
+                          setTimeout(() => {
+                              if (!resolved) {
+                                  resolved = true;
+                                  video.removeEventListener('seeked', onSeeked);
+                                  seekResolve();
+                              }
+                          }, 500); 
+                      });
+
+                      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                      frames.push(canvas.toDataURL('image/jpeg', 0.7)); 
+                      
+                      // Update progress visually (0-80% during capture)
+                      setCaptureProgress(Math.round(((i + 1) / totalFrames) * 80)); 
                   }
                   
-                  // Seek to next frame
-                  video.currentTime += interval;
-              };
+                  resolve(frames);
 
-              // Use 'seeked' event to ensure frame is ready
-              video.onseeked = captureFrame;
-              video.onerror = reject;
-              
-              // Start the loop
-              captureFrame();
+              } catch (e) {
+                  reject(e);
+              } finally {
+                  // Cleanup DOM
+                  if (document.body.contains(video)) {
+                      document.body.removeChild(video);
+                  }
+              }
           };
-          
-          video.onerror = reject;
+
+          video.onloadedmetadata = onLoaded;
+          video.onerror = (e) => {
+              if (document.body.contains(video)) document.body.removeChild(video);
+              reject(new Error("Video load failed"));
+          };
       });
   };
 
@@ -232,9 +266,8 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
             canvasRef.current.width = videoRef.current.videoWidth * scale;
             canvasRef.current.height = videoRef.current.videoHeight * scale;
 
-            // Capture 30 frames over ~3 seconds (approx 10 FPS)
-            // Increased from 20 to 30 to catch intermittent movements
-            const frameCount = 30;
+            // Capture 100 frames over ~10 seconds (10 FPS)
+            const frameCount = 100;
             const interval = 100; // ms
 
             for (let i = 0; i < frameCount; i++) {

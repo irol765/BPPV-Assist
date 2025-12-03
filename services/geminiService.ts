@@ -9,7 +9,7 @@ export const analyzeEyeMovement = async (frames: string[], lang: Language = 'en'
   
   const systemInstruction = `
     You are an expert Otolaryngologist and Vestibular Specialist.
-    You are provided with a sequence of video frames (30-40 frames covering 3-4 seconds) of a patient's eyes during a Dix-Hallpike maneuver.
+    You are provided with a sequence of video frames (30-100 frames covering 3-10 seconds) of a patient's eyes during a Dix-Hallpike maneuver.
     
     Your task is to identify **NYSTAGMUS** (involuntary eye movement).
     
@@ -39,8 +39,9 @@ export const analyzeEyeMovement = async (frames: string[], lang: Language = 'en'
   try {
     // Construct parts from multiple frames
     // frames are data URLs: "data:image/jpeg;base64,..."
-    // Limit to 45 frames max to be safe with token limits (though Gemini 2.5 Flash has huge context)
-    const framesToSend = frames.slice(0, 45);
+    // We increase limit to allow ~10s of video at 10fps. 
+    // Gemini 2.5 Flash context window is very large, so 100-120 frames is acceptable.
+    const framesToSend = frames.slice(0, 120);
 
     const parts = framesToSend.map(frame => ({
         inlineData: { mimeType: "image/jpeg", data: frame.split(',')[1] }
@@ -48,7 +49,7 @@ export const analyzeEyeMovement = async (frames: string[], lang: Language = 'en'
 
     // Add the text prompt as the last part
     parts.push({ 
-        text: `Analyze this ${framesToSend.length}-frame sequence (approx 3-4 seconds). Is there ANY nystagmus? Be highly sensitive to torsional movement.` 
+        text: `Analyze this ${framesToSend.length}-frame sequence (approx 10 seconds). Is there ANY nystagmus? Be highly sensitive to torsional movement.` 
     } as any);
 
     const response = await ai.models.generateContent({

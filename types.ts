@@ -1,4 +1,4 @@
-
+import React from 'react';
 
 export enum CanalType {
   POSTERIOR = 'Posterior',
@@ -56,7 +56,23 @@ export type Language = 'en' | 'zh';
 declare global {
   namespace JSX {
     interface IntrinsicElements {
-      // Catch-all to allow any React Three Fiber elements
+      // Basic Three.js elements used in R3F
+      group: any;
+      mesh: any;
+      meshStandardMaterial: any;
+      meshPhysicalMaterial: any;
+      meshBasicMaterial: any;
+      tubeGeometry: any;
+      dodecahedronGeometry: any;
+      sphereGeometry: any;
+      instancedMesh: any;
+      arrowHelper: any;
+      ambientLight: any;
+      spotLight: any;
+      pointLight: any;
+      directionalLight: any;
+      
+      // Catch-all to allow any other React Three Fiber elements
       [elemName: string]: any;
     }
   }
