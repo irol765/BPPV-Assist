@@ -2,7 +2,29 @@ import React, { useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { RoundedBox, Sphere, Cylinder, Box, ContactShadows, OrbitControls, Plane, Environment } from '@react-three/drei';
 import * as THREE from 'three';
-import '../types';
+
+// Fix for React Three Fiber intrinsic elements not being recognized
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      group: any;
+      mesh: any;
+      meshStandardMaterial: any;
+      meshPhysicalMaterial: any;
+      meshBasicMaterial: any;
+      tubeGeometry: any;
+      dodecahedronGeometry: any;
+      sphereGeometry: any;
+      instancedMesh: any;
+      arrowHelper: any;
+      ambientLight: any;
+      spotLight: any;
+      pointLight: any;
+      directionalLight: any;
+      [elemName: string]: any;
+    }
+  }
+}
 
 // --- Types ---
 interface HumanModelProps {

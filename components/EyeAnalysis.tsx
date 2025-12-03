@@ -432,7 +432,7 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
           />
         )}
         
-        {/* Eye Alignment Guide Overlay */}
+        {/* Eye Alignment Guide Overlay - Only show when NOT analyzing */}
         {!isAnalyzing && !videoFileSrc && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
              <div className="w-48 h-32 border-2 border-dashed border-white/50 rounded-2xl flex items-center justify-center bg-black/10 backdrop-blur-[1px]">
@@ -453,23 +453,34 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
 
         {/* Capturing / Analyzing Overlay */}
         {isAnalyzing && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 backdrop-blur-md z-40 transition-opacity duration-300">
-                <div className="w-16 h-16 relative flex items-center justify-center mb-4">
-                     <RefreshCw className="w-10 h-10 text-white animate-spin absolute" />
-                </div>
-                
-                {captureProgress < 100 ? (
-                    <div className="flex flex-col items-center">
-                        <p className="text-white font-bold text-lg mb-2">
-                            {isProcessingUpload ? t.processingVideo : t.capturing} {captureProgress}%
-                        </p>
-                        <p className="text-white/70 text-sm text-center px-4">
-                             {isProcessingUpload ? "Extracting frames..." : t.keepSteady}
-                        </p>
+            <div className={`absolute inset-0 flex flex-col items-center justify-center z-40 transition-all duration-300 ${
+                (!isProcessingUpload && captureProgress < 100) 
+                    ? 'bg-transparent' 
+                    : 'bg-black/90 backdrop-blur-md'
+            }`}>
+                {/* Inner container: Adds contrast background only during live capture so text is readable without blocking view */}
+                <div className={`flex flex-col items-center justify-center p-6 rounded-2xl transition-all ${
+                    (!isProcessingUpload && captureProgress < 100) 
+                        ? 'bg-black/60 backdrop-blur-sm shadow-xl border border-white/10' 
+                        : ''
+                }`}>
+                    <div className="w-16 h-16 relative flex items-center justify-center mb-4">
+                        <RefreshCw className="w-10 h-10 text-white animate-spin absolute" />
                     </div>
-                ) : (
-                    <p className="text-white font-medium animate-pulse">{t.analyzing}</p>
-                )}
+                    
+                    {captureProgress < 100 ? (
+                        <div className="flex flex-col items-center">
+                            <p className="text-white font-bold text-lg mb-2">
+                                {isProcessingUpload ? t.processingVideo : t.capturing} {captureProgress}%
+                            </p>
+                            <p className="text-white/70 text-sm text-center px-4 whitespace-nowrap">
+                                {isProcessingUpload ? "Extracting frames..." : t.keepSteady}
+                            </p>
+                        </div>
+                    ) : (
+                        <p className="text-white font-medium animate-pulse">{t.analyzing}</p>
+                    )}
+                </div>
             </div>
         )}
       </div>
