@@ -1,0 +1,7 @@
+{
+  "name": "BPPV Assist (耳石症复位助手)",
+  "description": "An intelligent assistant for BPPV (Benign Paroxysmal Positional Vertigo) management. Features AI-powered nystagmus analysis using Gemini Vision, and interactive 3D visualizations of the semicircular canals to guide repositioning maneuvers (Epley).",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
