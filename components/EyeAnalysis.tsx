@@ -24,6 +24,7 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
   
   const t = translations[lang];
 
+  // Cleanup stream on unmount
   useEffect(() => {
     return () => {
       if (stream) {
@@ -32,6 +33,13 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
     };
   }, [stream]);
 
+  // FIX: Attach stream to video element whenever the step is 'camera' and stream is available
+  useEffect(() => {
+    if (step === 'camera' && videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [step, stream]);
+
   const startCamera = async () => {
     try {
       setError(null);
@@ -39,16 +47,16 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
         video: { facingMode: 'user' } 
       });
       setStream(mediaStream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
+      // Note: Video ref attachment is handled by the useEffect above
     } catch (err) {
+      console.error(err);
       setError("Unable to access camera. Please check permissions.");
     }
   };
 
   const captureAndAnalyze = async () => {
     if (!videoRef.current || !canvasRef.current) return;
+    
     setCountdown(3);
     const countInterval = setInterval(() => {
       setCountdown(prev => {
@@ -64,6 +72,13 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
 
   const executeAnalysis = async () => {
     if (!videoRef.current || !canvasRef.current) return;
+    
+    // Safety check: Ensure video has dimensions
+    if (videoRef.current.videoWidth === 0 || videoRef.current.videoHeight === 0) {
+        setError(t.cameraInactive || "Camera not ready");
+        return;
+    }
+
     setIsAnalyzing(true);
     const context = canvasRef.current.getContext('2d');
     if (context) {
@@ -71,14 +86,16 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
       canvasRef.current.height = videoRef.current.videoHeight;
       context.drawImage(videoRef.current, 0, 0);
       const imageBase64 = canvasRef.current.toDataURL('image/jpeg', 0.8);
+      
       try {
         const result = await analyzeEyeMovement(imageBase64, lang);
-        // Inject the selected side into the result if AI is unsure, purely for context (optional)
+        // Inject the selected side into the result if AI is unsure
         if (result.hasBPPV && !result.side && selectedSide) {
              result.side = selectedSide;
         }
         onDiagnosisComplete(result);
       } catch (err) {
+        console.error("Diagnosis error:", err);
         setError("Analysis failed. Please try again.");
       } finally {
         setIsAnalyzing(false);
@@ -189,6 +206,7 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
             ref={videoRef} 
             autoPlay 
             playsInline 
+            muted
             className="w-full h-full object-cover transform scale-x-[-1]" 
           />
         )}

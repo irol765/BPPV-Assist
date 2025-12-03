@@ -1,30 +1,9 @@
+
 import React, { useRef, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Float, Text, OrbitControls, Environment, PerspectiveCamera } from '@react-three/drei';
 import * as THREE from 'three';
 import { Language } from '../types';
-
-// Augment JSX
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      mesh: any;
-      group: any;
-      tubeGeometry: any;
-      meshPhysicalMaterial: any;
-      meshStandardMaterial: any;
-      meshBasicMaterial: any;
-      instancedMesh: any;
-      dodecahedronGeometry: any;
-      sphereGeometry: any;
-      arrowHelper: any;
-      ambientLight: any;
-      spotLight: any;
-      pointLight: any;
-      directionalLight: any;
-    }
-  }
-}
 
 interface EarModelProps {
   torsoAngle: number;
@@ -40,7 +19,7 @@ interface EarModelProps {
 const CanalTube: React.FC<{ 
   points: THREE.Vector3[], 
   color: string, 
-  opacity?: number,
+  opacity?: number, 
   radius?: number
 }> = ({ points, color, opacity = 0.3, radius = 0.12 }) => {
     const curve = useMemo(() => new THREE.CatmullRomCurve3(points, true, 'centripetal'), [points]);

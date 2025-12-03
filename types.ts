@@ -50,3 +50,12 @@ export interface Maneuver {
 }
 
 export type Language = 'en' | 'zh';
+
+// Global JSX augmentation for React Three Fiber components
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      [elemName: string]: any;
+    }
+  }
+}
