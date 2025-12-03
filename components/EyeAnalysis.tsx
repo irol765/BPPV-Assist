@@ -481,13 +481,13 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
         </div>
       )}
 
-      {/* Main Action Buttons */}
-      <div className="grid grid-cols-5 gap-3 w-full">
+      {/* Main Action Buttons - Stack on mobile, side-by-side on larger */}
+      <div className="flex flex-col gap-3 w-full">
           {/* Capture Button */}
           <button 
             onClick={captureAndAnalyze}
             disabled={!stream || isAnalyzing || countdown > 0}
-            className={`col-span-3 py-4 rounded-xl font-bold text-lg shadow-md transition flex items-center justify-center gap-2
+            className={`w-full py-4 rounded-xl font-bold text-lg shadow-md transition flex items-center justify-center gap-2
               ${!stream || isAnalyzing 
                 ? 'bg-slate-300 text-slate-500 cursor-not-allowed' 
                 : 'bg-red-500 text-white hover:bg-red-600 hover:shadow-lg active:scale-95'
@@ -497,14 +497,14 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
             {t.analyzeButton}
           </button>
 
-          {/* Upload Button (Primary style for this step too) */}
+          {/* Upload Button */}
           <button 
               onClick={handleUploadClick}
               disabled={isAnalyzing}
-              className="col-span-2 py-4 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-700 transition shadow-md flex items-center justify-center gap-2"
+              className="w-full py-3 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-700 transition shadow-md flex items-center justify-center gap-2"
           >
               <Film size={20} />
-              {lang === 'en' ? 'Upload' : '上传'}
+              {lang === 'en' ? 'Upload existing video' : '上传已录制视频'}
           </button>
       </div>
 

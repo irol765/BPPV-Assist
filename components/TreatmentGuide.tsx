@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Maneuver, Language } from '../types';
 import HumanModel from './HumanModel';
-import { ChevronRight, ChevronLeft, Check, AlertTriangle, Home, Play, Pause, RotateCcw } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Check, AlertTriangle, Home, Play, Pause, RotateCcw, ArrowLeft } from 'lucide-react';
 import { translations } from '../translations';
 
 interface TreatmentGuideProps {
@@ -96,26 +96,16 @@ const TreatmentGuide: React.FC<TreatmentGuideProps> = ({ maneuver, onComplete, o
   const isTimerDone = timer === 0;
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50 overflow-hidden">
-      {/* Header */}
-      <div className="flex-none p-4 bg-white border-b border-slate-200 z-30 shadow-sm">
-        <div className="flex items-center justify-between mb-3">
-            <button onClick={onBack} className="text-slate-500 hover:text-slate-800 text-base font-medium px-2">
-                &larr; {t.exit}
-            </button>
-            <h2 className="font-bold text-slate-800 text-base md:text-lg truncate max-w-[200px]">{maneuver.name}</h2>
-            <div className="w-8" />
-        </div>
-        <div className="w-full bg-slate-100 rounded-full h-2">
-          <div 
-            className="bg-medical-500 h-2 rounded-full transition-all duration-500" 
-            style={{ width: `${progress}%` }} 
-          />
-        </div>
-      </div>
+    <div className="flex flex-col h-screen bg-slate-50 overflow-hidden landscape:flex-row">
+      
+      {/* 
+        LAYOUT STRATEGY: 
+        Portrait: Header -> Model -> Controls
+        Landscape: Model (Left) -> Sidebar (Right: Header + Text + Controls)
+      */}
 
-      {/* Main Content Area - Full Screen Human Model */}
-      <div className="flex-1 relative overflow-hidden bg-slate-100">
+      {/* --- SECTION 1: 3D MODEL (Flex Grow) --- */}
+      <div className="flex-1 relative bg-slate-100 order-2 landscape:order-1 landscape:h-full">
          <div className="w-full h-full relative">
             <HumanModel 
                 torsoAngle={step.torsoAngle}
@@ -125,102 +115,134 @@ const TreatmentGuide: React.FC<TreatmentGuideProps> = ({ maneuver, onComplete, o
                 headPitch={step.headPitch}
                 legAngle={step.legAngle}
             />
-            <div className="absolute top-6 left-6 bg-white/90 backdrop-blur px-4 py-2 rounded-xl text-sm font-bold text-slate-700 shadow-sm pointer-events-none z-10">
+            
+            {/* Overlay Title for Landscape (since header is in sidebar) */}
+            <div className="absolute top-4 left-4 hidden landscape:block bg-white/80 backdrop-blur px-3 py-1 rounded-lg text-sm font-bold shadow-sm pointer-events-none z-10">
+                 {maneuver.name}
+            </div>
+
+            {/* View Indicator */}
+            <div className="absolute top-4 right-4 landscape:hidden bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-slate-500 shadow-sm pointer-events-none z-10">
                  {t.humanView}
             </div>
          </div>
       </div>
 
-      {/* Controls Footer */}
-      <div className="flex-none bg-white border-t border-slate-200 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-40">
-        <div className="p-5 safe-pb max-w-4xl mx-auto w-full">
-            
-            {/* Step Info */}
-            <div className="mb-6">
-                <span className="text-sm font-black text-medical-600 uppercase tracking-widest mb-2 block">
-                    {t.step} {currentStepIndex + 1} / {maneuver.steps.length}
-                </span>
-                <h3 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2 leading-tight">{step.title}</h3>
-                <p className="text-slate-600 text-lg md:text-xl leading-relaxed">{step.description}</p>
+      {/* --- SECTION 2: CONTROLS & INFO (Sidebar in Landscape) --- */}
+      <div className="flex-none flex flex-col z-40 bg-white shadow-xl order-1 landscape:order-2 landscape:w-[400px] landscape:h-full landscape:border-l landscape:border-slate-200">
+        
+        {/* Header (Portrait Only) */}
+        <div className="landscape:hidden p-3 bg-white border-b border-slate-200">
+            <div className="flex items-center justify-between mb-2">
+                <button onClick={onBack} className="text-slate-500 hover:text-slate-800 p-1">
+                    <ArrowLeft size={20} />
+                </button>
+                <h2 className="font-bold text-slate-800 text-sm truncate max-w-[200px]">{maneuver.name}</h2>
+                <div className="w-6" /> 
+            </div>
+            <div className="w-full bg-slate-100 rounded-full h-1.5">
+              <div 
+                className="bg-medical-500 h-1.5 rounded-full transition-all duration-500" 
+                style={{ width: `${progress}%` }} 
+              />
+            </div>
+        </div>
+
+        {/* Info Content */}
+        <div className="p-4 md:p-6 flex-1 overflow-y-auto bg-white landscape:flex landscape:flex-col landscape:justify-center">
+             {/* Progress Bar (Landscape Only) */}
+             <div className="hidden landscape:block w-full bg-slate-100 rounded-full h-1.5 mb-6">
+              <div 
+                className="bg-medical-500 h-1.5 rounded-full transition-all duration-500" 
+                style={{ width: `${progress}%` }} 
+              />
             </div>
 
-            {/* Action Bar */}
-            <div className="flex items-stretch gap-4 h-20 md:h-24">
+            <div className="mb-4">
+                <span className="text-xs font-black text-medical-600 uppercase tracking-widest mb-1 block">
+                    {t.step} {currentStepIndex + 1} / {maneuver.steps.length}
+                </span>
+                <h3 className="text-xl md:text-2xl font-bold text-slate-900 mb-2 leading-tight">{step.title}</h3>
+                <p className="text-slate-600 text-base leading-relaxed">{step.description}</p>
+            </div>
+        </div>
+
+        {/* Action Controls */}
+        <div className="p-3 md:p-5 border-t border-slate-200 bg-slate-50 safe-pb">
+            <div className="flex items-stretch gap-2 md:gap-4 h-16 md:h-20">
                 
                 {/* Back Button */}
                 <button 
                     onClick={handlePrev}
-                    className="w-16 flex items-center justify-center rounded-2xl border-2 border-slate-100 text-slate-400 font-bold hover:bg-slate-50 active:scale-95 transition"
+                    className="w-12 md:w-16 flex items-center justify-center rounded-xl md:rounded-2xl border border-slate-200 text-slate-400 hover:bg-white active:scale-95 transition bg-white"
                 >
-                    <ChevronLeft size={32} />
+                    <ChevronLeft size={24} />
                 </button>
 
-                {/* Main Action Area */}
-                <div className="flex-1 flex gap-4">
-                    {/* Timer Button */}
-                    <button 
-                        onClick={() => setIsTimerRunning(!isTimerRunning)}
-                        className={`
-                            relative flex-1 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all active:scale-95 overflow-hidden
-                            ${isTimerDone 
-                                ? 'bg-slate-100 text-slate-400 border-2 border-slate-100' // Finished state
-                                : isTimerRunning 
-                                    ? 'bg-amber-100 text-amber-700 border-2 border-amber-200' // Running state
-                                    : 'bg-orange-500 text-white shadow-xl shadow-orange-200 animate-pulse' // Ready to start
-                            }
-                        `}
-                    >   
-                        {/* Background Progress Bar effect for timer */}
-                        {isTimerRunning && (
-                             <div 
-                                className="absolute left-0 top-0 bottom-0 bg-amber-200/50 transition-all duration-1000 ease-linear"
-                                style={{ width: `${((step.durationSeconds - timer) / step.durationSeconds) * 100}%` }}
-                             />
+                {/* Timer Button */}
+                <button 
+                    onClick={() => setIsTimerRunning(!isTimerRunning)}
+                    className={`
+                        relative flex-1 rounded-xl md:rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 overflow-hidden
+                        ${isTimerDone 
+                            ? 'bg-slate-200 text-slate-500 border border-slate-200' 
+                            : isTimerRunning 
+                                ? 'bg-amber-100 text-amber-700 border border-amber-200' 
+                                : 'bg-orange-500 text-white shadow-lg shadow-orange-200'
+                        }
+                    `}
+                >   
+                    {isTimerRunning && (
+                            <div 
+                            className="absolute left-0 top-0 bottom-0 bg-amber-200/50 transition-all duration-1000 ease-linear"
+                            style={{ width: `${((step.durationSeconds - timer) / step.durationSeconds) * 100}%` }}
+                            />
+                    )}
+
+                    <div className="relative flex items-center gap-2 z-10">
+                        {isTimerDone ? (
+                            <Check size={24} />
+                        ) : (
+                            <>
+                                {isTimerRunning ? <Pause size={20} fill="currentColor" /> : <Play size={24} fill="currentColor" />}
+                                <span className="text-2xl md:text-3xl font-mono tabular-nums">{timer}s</span>
+                                {!isTimerRunning && <span className="text-xs md:text-sm uppercase font-bold hidden sm:inline">{t.startTimer}</span>}
+                            </>
                         )}
+                    </div>
+                </button>
 
-                        <div className="relative flex items-center gap-3 z-10">
-                            {isTimerDone ? (
-                                <>
-                                    <Check size={32} />
-                                    <span className="text-xl">{lang === 'zh' ? '计时结束' : 'Complete'}</span>
-                                </>
-                            ) : (
-                                <>
-                                    {isTimerRunning ? <Pause size={32} fill="currentColor" /> : <Play size={40} fill="currentColor" />}
-                                    <span className="text-4xl md:text-5xl font-mono tabular-nums tracking-wider">{timer}s</span>
-                                    {/* Text always visible */}
-                                    {!isTimerRunning && <span className="text-lg uppercase tracking-wide ml-2 font-bold whitespace-nowrap">{t.startTimer}</span>}
-                                </>
-                            )}
-                        </div>
-                    </button>
+                {/* Reset (Tiny) */}
+                <button 
+                        onClick={() => { setTimer(step.durationSeconds); setIsTimerRunning(false); }}
+                        className="w-10 md:w-12 rounded-xl md:rounded-2xl bg-white border border-slate-200 text-slate-400 hover:text-slate-600 flex items-center justify-center"
+                >
+                    <RotateCcw size={18} />
+                </button>
 
-                    {/* Reset Timer (Mini) */}
-                    <button 
-                         onClick={() => { setTimer(step.durationSeconds); setIsTimerRunning(false); }}
-                         className="w-14 rounded-2xl bg-slate-50 border border-slate-200 text-slate-400 hover:text-slate-600 flex items-center justify-center"
-                         title="Reset Timer"
-                    >
-                        <RotateCcw size={24} />
-                    </button>
-
-                    {/* Next Button - Always Enabled */}
-                    <button 
-                        onClick={handleNext}
-                        className={`
-                            px-8 rounded-2xl font-bold text-white flex items-center justify-center gap-2 transition-all active:scale-95
-                            ${isTimerDone 
-                                ? 'bg-medical-600 hover:bg-medical-700 shadow-xl shadow-medical-200 ring-4 ring-medical-100' 
-                                : 'bg-slate-800 hover:bg-slate-700 opacity-90'
-                            }
-                        `}
-                    >
-                        <span className="text-lg">{currentStepIndex === maneuver.steps.length - 1 ? t.finish : t.nextStep}</span>
-                        <ChevronRight size={24} />
-                    </button>
-                </div>
+                {/* Next Button */}
+                <button 
+                    onClick={handleNext}
+                    className={`
+                        px-4 md:px-6 rounded-xl md:rounded-2xl font-bold text-white flex items-center justify-center gap-1 transition-all active:scale-95 min-w-[3rem]
+                        ${isTimerDone 
+                            ? 'bg-medical-600 hover:bg-medical-700 shadow-lg shadow-medical-200 ring-2 ring-medical-100' 
+                            : 'bg-slate-800 hover:bg-slate-700 opacity-90'
+                        }
+                    `}
+                >
+                    <span className="text-sm md:text-lg hidden sm:inline">{currentStepIndex === maneuver.steps.length - 1 ? t.finish : t.nextStep}</span>
+                    <ChevronRight size={24} />
+                </button>
+            </div>
+            
+            <div className="mt-2 text-center landscape:hidden">
+                 <button onClick={onBack} className="text-xs text-slate-400 py-1 px-2">
+                     {t.exit}
+                 </button>
             </div>
         </div>
+
       </div>
     </div>
   );
