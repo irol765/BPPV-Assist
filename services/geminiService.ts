@@ -1,69 +1,62 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { DiagnosisResult, CanalType, Side, Language } from '../types';
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-export const analyzeEyeMovement = async (frames: string[], lang: Language = 'en'): Promise<DiagnosisResult> => {
-  // We receive a sequence of frames (captured ~100ms apart) to detect movement.
+// 增加 testSide 参数
+export const analyzeEyeMovement = async (
+  frames: string[], 
+  lang: Language = 'en',
+  testSide: Side | 'UNKNOWN' = 'UNKNOWN' 
+): Promise<DiagnosisResult> => {
   
   const systemInstruction = `
-    You are an expert Otolaryngologist and Vestibular Specialist.
-    You are provided with a sequence of video frames (approx 10 seconds) of a patient's eyes during a Dix-Hallpike maneuver.
+    You are an expert Otolaryngologist analyzing a Dix-Hallpike test video.
     
-    Your task is to identify **NYSTAGMUS** (involuntary eye movement).
+    **CONTEXT:**
+    - Patient is performing the Dix-Hallpike maneuver on the **${testSide}** side.
+    - Camera: Front-facing, low light conditions expected.
     
-    **CRITICAL ANALYSIS INSTRUCTIONS (CHAIN OF THOUGHT):**
-
-    1.  **LANDMARK IDENTIFICATION (CRUCIAL):**
-        *   Do not just look at the pupil center.
-        *   Find a distinct landmark on the IRIS (e.g., a pigment spot, a crypt, or a blood vessel on the sclera near the iris). 
-        *   You MUST track this landmark to detect **TORSIONAL (Rotary)** movement. 
-
-    2.  **MOVEMENT PATTERN RECOGNITION:**
-        *   **True Nystagmus** is a "Sawtooth" waveform: A slow drift in one direction, followed by a fast corrective jerk (beat) in the opposite direction.
-        *   **Random Shaking** (from hand tremor) affects the whole frame/face. **Nystagmus** affects the eye position relative to the eyelids/face.
-        *   **Torsion:** Imagine the iris is a clock face. Does 12 o'clock rotate to 1 o'clock and snap back? This is the hallmark of Posterior Canal BPPV.
-        *   **Vertical:** Purely Upbeating or Downbeating.
-        *   **Horizontal:** Purely Side-to-side.
-
-    3.  **DIAGNOSIS LOGIC:**
-        *   **Posterior Canal BPPV:** Upbeating AND Torsional (Rotary) nystagmus. (Most Common).
-        *   **Anterior Canal BPPV:** Downbeating AND Torsional. (Rare).
-        *   **Horizontal Canal BPPV:** Horizontal (Geotropic or Apogeotropic).
-        *   **Negative:** Eye remains fixed relative to eyelids. No rhythmic beats.
-
-    **Output Rules:**
-    *   **hasBPPV**: Set to true if ANY rhythmic nystagmus is detected.
-    *   **confidence**: 
-        *   0.9+ if you see clear, defining beats (slow drift/fast jerk).
-        *   0.6-0.8 if subtle movement or poor video quality.
-        *   <0.5 if video is too blurry or dark (return hasBPPV: false).
-    *   'reasoning' MUST be in ${lang === 'zh' ? 'SIMPLIFIED CHINESE' : 'ENGLISH'}. 
-    *   **Reasoning Format:** "Observed [Direction] nystagmus. Landmark at [Position] rotated [Direction]..."
-
+    **YOUR TASK: VERIFY THE HYPOTHESIS**
+    Hypothesis: "The patient has BPPV in the ${testSide} ear."
+    
+    **ANALYSIS LOGIC:**
+    1.  **Look for Nystagmus:** Scrutinize the eyes for ANY rhythmic beating (vertical, torsional, or horizontal).
+        - *Tip:* In low light, track scleral vessels (red veins) or pupil edges.
+    
+    2.  **Evaluate Findings against Context:**
+        - **SCENARIO A (Consistent):** You see nystagmus. 
+          -> CONCLUSION: The maneuver on the ${testSide} side PROVOKED symptoms. **Confirm ${testSide} BPPV.**
+          -> Set \`hasBPPV: true\`, \`side: ${testSide}\`.
+          
+        - **SCENARIO B (Negative):** You see NO nystagmus (eyes are stable), even if the patient claims dizziness.
+          -> CONCLUSION: The maneuver on the ${testSide} side did NOT provoke objective signs.
+          -> Set \`hasBPPV: false\`.
+          
+        - **SCENARIO C (Contradictory - Rare):** You see clear nystagmus, but the direction strongly suggests the *opposite* canal (e.g., pure downbeating).
+          -> CONCLUSION: Complex case. Report the nystagmus but lower confidence on the side.
+    
+    **OUTPUT RULES:**
+    - **hasBPPV**: true only if objective nystagmus is visible.
+    - **side**: If hasBPPV is true, verify if it aligns with **${testSide}**. (In 95% of home cases, Provocation Side = Affected Side).
+    - **reasoning**: Explain clearly based on the context.
+      - Example (Positive): "在${testSide === 'Left' ? '左' : '右'}侧卧位激发出了明显的眼震，确认是${testSide === 'Left' ? '左' : '右'}侧耳石症。"
+      - Example (Negative): "虽然您可能感到眩晕，但未检测到眼震。请尝试测试另一侧。"
   `;
 
   try {
-    // Construct parts from multiple frames
-    // frames are data URLs: "data:image/jpeg;base64,..."
-    // We increase limit to allow ~150 frames (approx 12-15s at 10-12fps) for better temporal resolution.
     const framesToSend = frames.slice(0, 150);
-
     const parts = framesToSend.map(frame => ({
         inlineData: { mimeType: "image/jpeg", data: frame.split(',')[1] }
     }));
 
-    // Add the text prompt as the last part
     parts.push({ 
-        text: `Analyze this ${framesToSend.length}-frame sequence. Focus intently on IRIS ROTATION (Torsion) and VERTICAL beats. Is there BPPV nystagmus?` 
+        text: `Patient is testing ${testSide} side. Verify if this maneuver provokes nystagmus.` 
     } as any);
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: {
-        parts: parts
-      },
+      model: "gemini-2.5-flash", 
+      contents: { parts: parts },
       config: {
         systemInstruction,
         responseMimeType: "application/json",
@@ -73,7 +66,7 @@ export const analyzeEyeMovement = async (frames: string[], lang: Language = 'en'
             hasBPPV: { type: Type.BOOLEAN },
             side: { type: Type.STRING, enum: ["Left", "Right"] },
             canal: { type: Type.STRING, enum: ["Posterior", "Horizontal", "Anterior"] },
-            confidence: { type: Type.NUMBER, description: "0 to 1 score" },
+            confidence: { type: Type.NUMBER },
             reasoning: { type: Type.STRING }
           },
           required: ["hasBPPV", "confidence", "reasoning"]
@@ -83,12 +76,13 @@ export const analyzeEyeMovement = async (frames: string[], lang: Language = 'en'
 
     const text = response.text;
     if (!text) throw new Error("No response from AI");
-    
     const result = JSON.parse(text);
 
     return {
       hasBPPV: result.hasBPPV,
-      side: result.side as Side,
+      // 这里的逻辑稍微放松，如果 AI 明确返回了 Side 就用 AI 的，
+      // 如果 AI 没返回 Side 但确认有病，才兜底使用 testSide
+      side: result.side as Side || (result.hasBPPV && testSide !== 'UNKNOWN' ? testSide : undefined),
       canal: result.canal as CanalType,
       confidence: result.confidence,
       reasoning: result.reasoning
@@ -99,9 +93,7 @@ export const analyzeEyeMovement = async (frames: string[], lang: Language = 'en'
     return {
       hasBPPV: false,
       confidence: 0,
-      reasoning: lang === 'zh' 
-        ? "分析因网络或技术错误中断。请确保网络通畅或尝试上传本地录制的清晰视频。" 
-        : "Analysis failed. Please check connection or try uploading a clear video file."
+      reasoning: lang === 'zh' ? "分析中断，请重试。" : "Analysis failed."
     };
   }
 };

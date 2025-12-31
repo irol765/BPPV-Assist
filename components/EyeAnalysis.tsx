@@ -273,20 +273,34 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
 
   const performAnalysis = async (frames: string[]) => {
       try {
-        const result = await analyzeEyeMovement(frames, lang);
-        // Inject the selected side into the result if AI is unsure
+        // 关键修改：获取当前测试的侧别 (selectedSide)
+        // 如果用户是在“快速复发检测”场景下，这个变量就是他选择的测试方向
+        // 如果未选择，则传入 'UNKNOWN'
+        const currentTestSide = selectedSide || 'UNKNOWN';
+
+        // 调用服务：传入 frames, 语言设置, 以及当前测试侧
+        // 注意：这需要您的 geminiService.ts 已经更新了对应的参数接收
+        const result = await analyzeEyeMovement(frames, lang, currentTestSide);
+
+        // 逻辑补全：
+        // 如果 AI 判定为 BPPV 阳性 (hasBPPV: true)，但因为画面模糊无法通过眼震方向确诊侧别 (result.side 为空)
+        // 我们根据“诱发侧即患侧”的原则，强制将结果修正为当前测试侧
         if (result.hasBPPV && !result.side && selectedSide) {
              result.side = selectedSide;
         }
+
         onDiagnosisComplete(result);
       } catch (err) {
         console.error("Gemini API Error", err);
-        setError("AI Service unavailable. Please try again.");
+        // 错误提示国际化优化
+        setError(lang === 'zh' 
+          ? "AI 服务连接失败，请检查网络或稍后重试。" 
+          : "AI Service unavailable. Please check network or try again.");
       } finally {
         setIsAnalyzing(false);
         setIsProcessingUpload(false);
         setCaptureProgress(0);
-        // Don't auto-restart camera here, let the user see the result screen
+        // 保持摄像头关闭，让用户停留在结果页面查看建议或重试
       }
   };
 

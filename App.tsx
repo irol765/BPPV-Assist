@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Activity, Brain, Rotate3D, ShieldCheck, Globe, ArrowLeft, ChevronRight } from 'lucide-react';
+import { Activity, Brain, Rotate3D, ShieldCheck, Globe, ArrowLeft, ChevronRight, Play, Home } from 'lucide-react';
 import EyeAnalysis from './components/EyeAnalysis';
 import TreatmentGuide from './components/TreatmentGuide';
 import { DiagnosisResult, Maneuver, CanalType, Side, Language } from './types';
@@ -38,14 +37,17 @@ const App: React.FC = () => {
     setAppState(AppState.TREATMENT);
   };
 
+  // 修改：放宽推荐逻辑，只要有侧别就推荐 Epley
   const getRecommendedManeuver = (diag: DiagnosisResult): Maneuver | null => {
-    if (!diag.hasBPPV || !diag.canal || !diag.side) return null;
+    // 如果没病，或者连左右都不知道，则无法推荐
+    if (!diag.hasBPPV || !diag.side) return null;
     
-    // Simple logic for demo
-    if (diag.canal === CanalType.POSTERIOR) {
-        return diag.side === Side.RIGHT ? MANEUVERS.EPLEY_RIGHT : MANEUVERS.EPLEY_LEFT;
+    // 默认只要确定了左右，就推荐对应侧的 Epley 复位法 (针对最常见的后半规管 BPPV)
+    if (diag.side === Side.RIGHT) {
+        return MANEUVERS.EPLEY_RIGHT;
+    } else {
+        return MANEUVERS.EPLEY_LEFT;
     }
-    return null; 
   };
 
   const renderHome = () => (
@@ -154,65 +156,103 @@ const App: React.FC = () => {
     if (!diagnosis) return null;
     const recommended = getRecommendedManeuver(diagnosis);
 
+    // 判断状态以设置不同的样式
+    const isPositive = diagnosis.hasBPPV;
+    const resultBgClass = isPositive ? 'bg-amber-50' : 'bg-slate-50';
+    const iconColorClass = isPositive ? 'text-amber-600' : 'text-slate-400';
+
     return (
       <div className="min-h-screen bg-slate-50 pt-10 px-4 flex flex-col items-center">
          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
-            <div className={`p-6 ${diagnosis.hasBPPV ? 'bg-medical-50' : 'bg-slate-50'}`}>
+            {/* 结果头部 */}
+            <div className={`p-6 ${resultBgClass}`}>
                 <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
-                    <ShieldCheck className="w-6 h-6 text-medical-600" />
+                    <ShieldCheck className={`w-6 h-6 ${iconColorClass}`} />
                     {t.analysisResults}
                 </h2>
                 
                 <div className="space-y-4">
-                    <div className="flex justify-between border-b border-slate-200 pb-2">
+                    <div className="flex justify-between border-b border-black/5 pb-2">
                         <span className="text-slate-500">{t.confidence}</span>
                         <span className="font-mono font-bold text-slate-700">{(diagnosis.confidence * 100).toFixed(0)}%</span>
                     </div>
-                    {diagnosis.hasBPPV ? (
+                    {isPositive ? (
                         <>
-                             <div className="flex justify-between border-b border-slate-200 pb-2">
+                             <div className="flex justify-between border-b border-black/5 pb-2">
                                 <span className="text-slate-500">{t.affectedSide}</span>
-                                <span className="font-bold text-red-600">{diagnosis.side}</span>
+                                {/* 显示大号的患侧提示 */}
+                                <span className="font-bold text-red-600 text-xl">
+                                    {diagnosis.side === Side.LEFT 
+                                        ? (lang === 'zh' ? '左侧 (Left)' : 'Left') 
+                                        : (lang === 'zh' ? '右侧 (Right)' : 'Right')}
+                                </span>
                             </div>
-                            <div className="flex justify-between border-b border-slate-200 pb-2">
+                            <div className="flex justify-between border-b border-black/5 pb-2">
                                 <span className="text-slate-500">{t.affectedCanal}</span>
-                                <span className="font-bold text-medical-700">{diagnosis.canal}</span>
+                                <span className="font-bold text-amber-700">
+                                    {/* 如果没看清半规管，显示推测信息 */}
+                                    {diagnosis.canal || (lang === 'zh' ? '后半规管 (疑似)' : 'Posterior (Suspected)')}
+                                </span>
                             </div>
                         </>
                     ) : (
-                        <div className="text-slate-600">
+                        <div className="text-slate-600 font-medium py-2">
                             {t.noBppv}
                         </div>
                     )}
                 </div>
 
-                <div className="mt-4 p-3 bg-white rounded-lg border border-slate-200 text-sm text-slate-600 italic">
+                <div className="mt-4 p-3 bg-white/80 rounded-lg border border-black/5 text-sm text-slate-600 italic leading-relaxed">
                     "{diagnosis.reasoning}"
                 </div>
             </div>
 
+            {/* 操作区：根据结果显示不同按钮 */}
             <div className="p-6 bg-white safe-pb">
-                {diagnosis.hasBPPV && recommended ? (
-                    <div>
-                        <h3 className="font-bold text-slate-900 mb-2">{t.recommendedTreatment}</h3>
-                        <p className="text-sm text-slate-500 mb-4">{t.recommendedTreatmentDesc}</p>
+                {isPositive && recommended ? (
+                    <div className="animate-pulse-slow">
+                        <h3 className="font-bold text-slate-900 mb-2 flex items-center gap-2">
+                            ✅ {t.recommendedTreatment}
+                        </h3>
+                        <p className="text-sm text-slate-500 mb-4">
+                            {lang === 'zh' 
+                                ? `检测到${diagnosis.side === Side.LEFT ? '左' : '右'}侧问题，请立即跟随指导进行 Epley 复位：` 
+                                : `Detected ${diagnosis.side} side issue. Start Epley maneuver immediately:`}
+                        </p>
                         <button 
                             onClick={() => startTreatment(recommended)}
-                            className="w-full py-3 bg-medical-600 text-white rounded-xl font-bold hover:bg-medical-700 shadow-lg shadow-medical-200 transition"
+                            className="w-full py-4 bg-medical-600 text-white rounded-xl font-bold text-lg hover:bg-medical-700 shadow-xl shadow-medical-200 transition transform active:scale-95 flex items-center justify-center gap-2"
                         >
-                            {t.startManeuver} {recommended.name}
+                            <Play className="fill-current" />
+                            {lang === 'zh' ? '开始复位 (跟着做)' : 'Start Treatment'}
                         </button>
                     </div>
                 ) : (
                     <div>
                         <h3 className="font-bold text-slate-900 mb-2">{t.nextSteps}</h3>
-                        <p className="text-sm text-slate-500 mb-4">{t.consultDoctor}</p>
-                        <button 
-                            onClick={() => setAppState(AppState.HOME)}
-                            className="w-full py-3 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition"
-                        >
-                            {t.backHome}
-                        </button>
+                        <p className="text-sm text-slate-500 mb-4 leading-relaxed">
+                             {lang === 'zh' 
+                                ? "当前侧未检测到明显眼震。如果您依然感到眩晕，强烈建议尝试测试另一侧。"
+                                : "No nystagmus detected on this side. If you are still dizzy, please try testing the other side."}
+                        </p>
+                        
+                        <div className="flex gap-3">
+                            <button 
+                                onClick={() => setAppState(AppState.HOME)}
+                                className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition flex items-center justify-center gap-2"
+                            >
+                                <Home size={18} />
+                                {t.backHome}
+                            </button>
+                             {/* 方便用户直接去测另一边 */}
+                             <button 
+                                onClick={() => setAppState(AppState.SIDE_SELECT)}
+                                className="flex-1 py-3 bg-white border-2 border-slate-200 text-slate-700 rounded-xl font-bold hover:border-medical-500 hover:text-medical-600 transition flex items-center justify-center gap-2"
+                            >
+                                <Rotate3D size={18} />
+                                {lang === 'zh' ? '测另一侧' : 'Test Other Side'}
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>
