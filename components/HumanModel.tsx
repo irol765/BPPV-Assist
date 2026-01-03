@@ -4,7 +4,6 @@ import { RoundedBox, Sphere, Cylinder, Box, ContactShadows, OrbitControls, Plane
 import * as THREE from 'three';
 
 // Fix for missing R3F types in this file context
-// Augmenting both global JSX and React.JSX to ensure compatibility with different React type versions
 declare global {
   namespace JSX {
     interface IntrinsicElements {
@@ -20,36 +19,22 @@ declare global {
       primitive: any;
     }
   }
-  
-  namespace React {
-    namespace JSX {
-      interface IntrinsicElements {
-        group: any;
-        mesh: any;
-        meshStandardMaterial: any;
-        meshPhysicalMaterial: any;
-        meshBasicMaterial: any;
-        ambientLight: any;
-        directionalLight: any;
-        spotLight: any;
-        pointLight: any;
-        primitive: any;
-      }
-    }
-  }
 }
 
 // --- Types ---
 interface HumanModelProps {
   torsoAngle: number; // 90 (sit) to 0 (lie)
   bodyRoll: number;   // -90 (left side) to 90 (right side)
-  bodyYaw?: number;   // Rotation of whole body relative to bed (0=longitudinal, 90=facing side)
+  bodyYaw?: number;   // Rotation of whole body relative to bed
   headYaw: number;    // -45 to 45 (relative to torso)
   headPitch: number;  // -30 (back) to 20 (tuck)
-  legAngle?: number;  // 0 (horizontal on bed) to 90 (hanging down)
+  legAngle?: number;  // 0 (legs straight) to 90 (legs hanging down)
+  kneeAngle?: number; // 0 (straight) to 90 (bent backward)
+  armAngle?: number;  // 0 (down) to 90 (forward/up)
+  elbowAngle?: number;// 0 (straight) to 90 (bent)
 }
 
-// --- Geometry Components ---
+// --- Animated Body Parts ---
 
 const Head: React.FC = () => {
   return (
@@ -58,25 +43,22 @@ const Head: React.FC = () => {
       <Sphere args={[0.3, 32, 32]} position={[0, 0.4, 0]}>
         <meshStandardMaterial color="#fcd34d" roughness={0.3} />
       </Sphere>
-      {/* Face Flat (to help orient direction) */}
+      {/* Face Flat */}
       <RoundedBox args={[0.45, 0.5, 0.2]} radius={0.05} position={[0, 0.4, 0.2]}>
           <meshStandardMaterial color="#fcd34d" roughness={0.3} />
       </RoundedBox>
-      
       {/* Nose */}
       <Box args={[0.08, 0.15, 0.1]} position={[0, 0.4, 0.35]}>
         <meshStandardMaterial color="#eab308" />
       </Box>
-      
-      {/* Eyes (Closed/Neutral) */}
+      {/* Eyes */}
       <Box args={[0.08, 0.02, 0.05]} position={[-0.12, 0.45, 0.31]}>
          <meshStandardMaterial color="#78350f" />
       </Box>
       <Box args={[0.08, 0.02, 0.05]} position={[0.12, 0.45, 0.31]}>
          <meshStandardMaterial color="#78350f" />
       </Box>
-
-      {/* Ears (Critical for context) */}
+      {/* Ears */}
       <group position={[-0.32, 0.4, 0]}>
          <RoundedBox args={[0.05, 0.15, 0.1]} radius={0.02}>
              <meshStandardMaterial color="#fbbf24" />
@@ -91,7 +73,118 @@ const Head: React.FC = () => {
   );
 };
 
-const Torso: React.FC = () => (
+const Arm: React.FC<{ 
+  side: 'left' | 'right', 
+  armAngle: number, 
+  elbowAngle: number 
+}> = ({ side, armAngle, elbowAngle }) => {
+  const upperArmRef = useRef<THREE.Group>(null);
+  const forearmRef = useRef<THREE.Group>(null);
+  
+  const isLeft = side === 'left';
+  const xPos = isLeft ? -0.7 : 0.7;
+
+  useFrame((state, delta) => {
+    const damp = 5.0;
+    
+    // Shoulder Rotation (Upper Arm)
+    // armAngle 0 = Down, 90 = Forward. Rotation usually negative X to lift.
+    const targetShoulderX = THREE.MathUtils.degToRad(-armAngle);
+    if (upperArmRef.current) {
+        upperArmRef.current.rotation.x = THREE.MathUtils.damp(upperArmRef.current.rotation.x, targetShoulderX, damp, delta);
+    }
+
+    // Elbow Rotation (Forearm)
+    // elbowAngle 0 = Straight, 90 = Bent. Rotation usually negative X to bend inward/up.
+    const targetElbowX = THREE.MathUtils.degToRad(-elbowAngle);
+    if (forearmRef.current) {
+        forearmRef.current.rotation.x = THREE.MathUtils.damp(forearmRef.current.rotation.x, targetElbowX, damp, delta);
+    }
+  });
+
+  return (
+    <group position={[xPos, 0.9, 0]}> {/* Shoulder Pivot Point */}
+        <group ref={upperArmRef}>
+            {/* Upper Arm Geometry - Center shifted down so pivot is at top */}
+            <RoundedBox args={[0.25, 0.5, 0.3]} radius={0.1} position={[0, -0.25, 0]}>
+                <meshStandardMaterial color="#60a5fa" />
+            </RoundedBox>
+
+            {/* Elbow Pivot Point - At bottom of Upper Arm */}
+            <group position={[0, -0.5, 0]} ref={forearmRef}>
+                {/* Forearm Geometry - Center shifted down */}
+                <RoundedBox args={[0.22, 0.5, 0.28]} radius={0.1} position={[0, -0.25, 0]}>
+                    <meshStandardMaterial color="#60a5fa" />
+                </RoundedBox>
+                {/* Hand */}
+                <RoundedBox args={[0.2, 0.2, 0.2]} radius={0.05} position={[0, -0.55, 0]}>
+                    <meshStandardMaterial color="#fcd34d" />
+                </RoundedBox>
+            </group>
+        </group>
+    </group>
+  );
+}
+
+const Leg: React.FC<{ 
+    side: 'left' | 'right', 
+    legAngle: number, 
+    kneeAngle: number 
+}> = ({ side, legAngle, kneeAngle }) => {
+    const thighRef = useRef<THREE.Group>(null);
+    const shinRef = useRef<THREE.Group>(null);
+    
+    const isLeft = side === 'left';
+    const xPos = isLeft ? -0.25 : 0.25;
+
+    useFrame((state, delta) => {
+        const damp = 5.0;
+        
+        // Hip Rotation (Thigh)
+        // legAngle 0 = Straight (Aligned with torso), 90 = Bent (Sitting). 
+        // Rotation positive X to bend forward/up relative to body, or hanging down if body is supine?
+        // Context: "legs hanging down". 
+        // If legAngle is increasing, legs go from straight to 90 deg flexion at hip.
+        const targetHipX = THREE.MathUtils.degToRad(legAngle);
+        if (thighRef.current) {
+            thighRef.current.rotation.x = THREE.MathUtils.damp(thighRef.current.rotation.x, targetHipX, damp, delta);
+        }
+
+        // Knee Rotation (Shin)
+        // kneeAngle 0 = Straight. Positive = Flexion (bending backward).
+        // Rotation positive X to bend back.
+        const targetKneeX = THREE.MathUtils.degToRad(kneeAngle);
+        if (shinRef.current) {
+            shinRef.current.rotation.x = THREE.MathUtils.damp(shinRef.current.rotation.x, targetKneeX, damp, delta);
+        }
+    });
+
+    return (
+        <group position={[xPos, -0.4, 0]}> {/* Hip Joint Pivot */}
+            <group ref={thighRef}>
+                {/* Thigh Geometry - Shifted down */}
+                <RoundedBox args={[0.4, 1.0, 0.4]} radius={0.1} position={[0, -0.5, 0]}>
+                    <meshStandardMaterial color="#1d4ed8" roughness={0.5} />
+                </RoundedBox>
+
+                {/* Knee Joint Pivot - At bottom of Thigh */}
+                <group position={[0, -1.0, 0]} ref={shinRef}>
+                    {/* Shin Geometry - Shifted down */}
+                    <RoundedBox args={[0.38, 1.0, 0.38]} radius={0.1} position={[0, -0.5, 0]}>
+                        <meshStandardMaterial color="#1d4ed8" roughness={0.5} />
+                    </RoundedBox>
+                    {/* Foot */}
+                    <RoundedBox args={[0.4, 0.15, 0.6]} radius={0.05} position={[0, -1.05, 0.2]}>
+                        <meshStandardMaterial color="#0f172a" />
+                    </RoundedBox>
+                </group>
+            </group>
+        </group>
+    );
+};
+
+const Torso: React.FC<{armAngle: number, elbowAngle: number}> = ({armAngle, elbowAngle}) => {
+  return (
   <group>
     {/* Chest */}
     <RoundedBox args={[0.9, 1.0, 0.5]} radius={0.1} position={[0, 0.5, 0]}>
@@ -105,55 +198,30 @@ const Torso: React.FC = () => (
     <Cylinder args={[0.12, 0.15, 0.3]} position={[0, 1.1, 0]}>
         <meshStandardMaterial color="#fcd34d" />
     </Cylinder>
-    {/* Arms (Simplified, tucked) */}
-    <RoundedBox args={[0.25, 1.0, 0.3]} radius={0.1} position={[-0.7, 0.4, 0.1]}>
-       <meshStandardMaterial color="#60a5fa" />
-    </RoundedBox>
-    <RoundedBox args={[0.25, 1.0, 0.3]} radius={0.1} position={[0.7, 0.4, 0.1]}>
-       <meshStandardMaterial color="#60a5fa" />
-    </RoundedBox>
-  </group>
-);
-
-const LowerBody: React.FC = () => (
-  <group>
-    {/* 
-        Simplified Lower Body Geometry 
-        Origin (0,0,0) is at the Pivot (Hips).
-        Y+ is Up, Y- is Down (Legs direction).
-    */}
     
-    {/* Hips - Centered at -0.2 to hang below pivot */}
+    <Arm side="left" armAngle={armAngle} elbowAngle={elbowAngle} />
+    <Arm side="right" armAngle={armAngle} elbowAngle={elbowAngle} />
+  </group>
+  );
+};
+
+const LowerBody: React.FC<{legAngle: number, kneeAngle: number}> = ({legAngle, kneeAngle}) => {
+  return (
+  <group>
+    {/* Pelvis/Hips */}
     <RoundedBox args={[0.95, 0.4, 0.5]} radius={0.1} position={[0, -0.2, 0]}>
       <meshStandardMaterial color="#1e3a8a" roughness={0.5} />
     </RoundedBox>
 
-    {/* Left Leg */}
-    <RoundedBox args={[0.4, 2.0, 0.4]} radius={0.1} position={[-0.25, -1.4, 0]}>
-       <meshStandardMaterial color="#1d4ed8" roughness={0.5} />
-    </RoundedBox>
-    {/* Left Foot */}
-    <RoundedBox args={[0.42, 0.15, 0.6]} radius={0.05} position={[-0.25, -2.45, 0.2]}>
-        <meshStandardMaterial color="#0f172a" />
-    </RoundedBox>
-
-    {/* Right Leg */}
-    <RoundedBox args={[0.4, 2.0, 0.4]} radius={0.1} position={[0.25, -1.4, 0]}>
-       <meshStandardMaterial color="#1d4ed8" roughness={0.5} />
-    </RoundedBox>
-    {/* Right Foot */}
-    <RoundedBox args={[0.42, 0.15, 0.6]} radius={0.05} position={[0.25, -2.45, 0.2]}>
-        <meshStandardMaterial color="#0f172a" />
-    </RoundedBox>
+    <Leg side="left" legAngle={legAngle} kneeAngle={kneeAngle} />
+    <Leg side="right" legAngle={legAngle} kneeAngle={kneeAngle} />
   </group>
-);
+  );
+};
 
 const Bed: React.FC = () => (
     <group position={[0, -0.5, 0]}>
-        {/* Mattress - Top surface at roughly -0.3 
-            Width (X) = 2.5
-            Length (Z) = 5
-        */}
+        {/* Mattress */}
         <RoundedBox args={[2.5, 0.4, 5]} radius={0.1} position={[0, 0, 0.5]}>
              <meshStandardMaterial color="#f1f5f9" roughness={0.8} />
         </RoundedBox>
@@ -161,7 +229,6 @@ const Bed: React.FC = () => (
         <RoundedBox args={[1.2, 0.2, 0.6]} radius={0.1} position={[0, 0.3, -1.2]}>
              <meshStandardMaterial color="#ffffff" roughness={0.9} />
         </RoundedBox>
-        {/* Floor shadow */}
         <Plane args={[10, 10]} rotation={[-Math.PI/2, 0, 0]} position={[0, -1, 0]}>
             <meshBasicMaterial color="#f8fafc" opacity={0.5} transparent />
         </Plane>
@@ -170,97 +237,76 @@ const Bed: React.FC = () => (
 
 // --- Main Scene Animation ---
 
-const Scene: React.FC<HumanModelProps> = ({ torsoAngle, bodyRoll, bodyYaw = 0, headYaw, headPitch, legAngle = 0 }) => {
+const Scene: React.FC<HumanModelProps> = ({ 
+    torsoAngle, bodyRoll, bodyYaw = 0, headYaw, headPitch, 
+    legAngle = 0, kneeAngle = 0, armAngle = 0, elbowAngle = 0 
+}) => {
   const positionGroup = useRef<THREE.Group>(null);
-  const yawGroup = useRef<THREE.Group>(null);
-  const bodyRollGroup = useRef<THREE.Group>(null);
-  const torsoPivotGroup = useRef<THREE.Group>(null);
+  const bodyGroup = useRef<THREE.Group>(null);
   const headPivotGroup = useRef<THREE.Group>(null);
-  const legsPivotGroup = useRef<THREE.Group>(null);
-
+  
   useFrame((state, delta) => {
-    // Faster, responsive damp factor
     const dampFactor = 5.0; 
 
-    // --- Rotations ---
-    if (yawGroup.current) {
-        // Rotation of whole body on bed (Y axis)
-        const targetYaw = THREE.MathUtils.degToRad(bodyYaw);
-        yawGroup.current.rotation.y = THREE.MathUtils.damp(yawGroup.current.rotation.y, targetYaw, dampFactor, delta);
+    // Complex Body Rotation with specific order to avoid Gimbal Lock
+    if (bodyGroup.current) {
+        const radTorso = THREE.MathUtils.degToRad(torsoAngle - 90); // 90 (sit) -> 0 rot, 0 (lie) -> -90 rot
+        const radYaw = THREE.MathUtils.degToRad(bodyYaw);
+        const radRoll = THREE.MathUtils.degToRad(bodyRoll);
+
+        // Apply Damping to individual Euler components
+        // Note: Direct Euler damping can be tricky with order, but for these ranges it's usually fine.
+        // We calculate target values first.
+        
+        const curRot = bodyGroup.current.rotation;
+        
+        const nextX = THREE.MathUtils.damp(curRot.x, radTorso, dampFactor, delta);
+        const nextY = THREE.MathUtils.damp(curRot.y, radYaw, dampFactor, delta);
+        const nextZ = THREE.MathUtils.damp(curRot.z, radRoll, dampFactor, delta);
+
+        // SET ROTATION WITH EXPLICIT ORDER 'YXZ'
+        // This is critical for medical maneuvers like Epley/BBQ where you turn (Yaw) then lie back (Pitch)
+        bodyGroup.current.rotation.set(nextX, nextY, nextZ, 'YXZ');
     }
 
-    if (bodyRollGroup.current) {
-        // Side rolling (Z axis)
-        const targetRoll = THREE.MathUtils.degToRad(bodyRoll);
-        bodyRollGroup.current.rotation.z = THREE.MathUtils.damp(bodyRollGroup.current.rotation.z, targetRoll, dampFactor, delta);
-    }
-
-    if (torsoPivotGroup.current) {
-        // Sit Up (X axis)
-        // torsoAngle: 90 = Sit (Upright), 0 = Lie (Flat)
-        const targetPitch = THREE.MathUtils.degToRad(torsoAngle - 90);
-        torsoPivotGroup.current.rotation.x = THREE.MathUtils.damp(torsoPivotGroup.current.rotation.x, targetPitch, dampFactor, delta);
-    }
-
+    // Head Animation (Relative to Torso)
     if (headPivotGroup.current) {
         const targetYaw = THREE.MathUtils.degToRad(headYaw);
         const targetHeadPitch = THREE.MathUtils.degToRad(headPitch);
-        
         headPivotGroup.current.rotation.y = THREE.MathUtils.damp(headPivotGroup.current.rotation.y, targetYaw, 5, delta);
         headPivotGroup.current.rotation.x = THREE.MathUtils.damp(headPivotGroup.current.rotation.x, targetHeadPitch, 5, delta);
     }
 
-    if (legsPivotGroup.current) {
-        // Leg Logic:
-        // legAngle = 0  -> Horizontal on bed.
-        // legAngle = 90 -> Hanging Down.
-        const targetRot = THREE.MathUtils.degToRad(legAngle - 90);
-        legsPivotGroup.current.rotation.x = THREE.MathUtils.damp(legsPivotGroup.current.rotation.x, targetRot, dampFactor, delta);
-    }
-
-    // --- Position Logic (Slide to edge) ---
+    // Position Sliding Logic (to stay on bed during turns)
     if (positionGroup.current) {
-        // If bodyYaw is significant (meaning we are turning to sit on the side),
-        // we move the body to the edge of the bed so legs don't clip.
-        // Bed Width = 2.5 (Edge at 1.25). Hips width ~0.9.
-        // Target position ~ 1.0 or -1.0 depending on Yaw direction.
-        
         let targetX = 0;
-        
-        // Threshold check for intended "Side Sit"
-        if (bodyYaw > 45) targetX = 1.0;  // Facing Left -> Move to Left Edge (X+)
-        if (bodyYaw < -45) targetX = -1.0; // Facing Right -> Move to Right Edge (X-)
-
-        // Smoothly slide
+        if (bodyYaw > 45) targetX = 0.5; 
+        if (bodyYaw < -45) targetX = -0.5; 
         positionGroup.current.position.x = THREE.MathUtils.damp(positionGroup.current.position.x, targetX, dampFactor, delta);
     }
   });
 
   return (
-    <group position={[0, -0.2, 0]}> {/* Shift whole scene vertically */}
+    <group position={[0, -0.2, 0]}>
         <Bed />
-        
-        {/* Animated Position Group (Slides to edge) */}
         <group ref={positionGroup}> 
-             {/* Animated Yaw Group (Turns to face side) */}
-            <group ref={yawGroup}>
-                 {/* Animated Roll Group (Lying on side) */}
-                <group ref={bodyRollGroup}>
-                    
-                    {/* Legs Group - Sibling to Torso, rotates independently on X */}
-                    <group ref={legsPivotGroup} position={[0, 0, 0]}>
-                         <LowerBody />
-                    </group>
+            {/* 
+               BodyGroup handles the main Torso/Whole Body orientation.
+               It acts as the parent for Hips and Torso.
+            */}
+            <group ref={bodyGroup}>
+                
+                {/* Hips & Legs */}
+                <LowerBody legAngle={legAngle} kneeAngle={kneeAngle} />
 
-                    {/* Torso Group */}
-                    <group ref={torsoPivotGroup} position={[0, 0, 0]}>
-                        <Torso />
-                        <group ref={headPivotGroup} position={[0, 1.2, 0]}>
-                            <Head />
-                        </group>
-                    </group>
-
+                {/* Upper Body & Head */}
+                <Torso armAngle={armAngle} elbowAngle={elbowAngle} />
+                
+                {/* Head is attached to Torso conceptually, positioned relative to it */}
+                <group ref={headPivotGroup} position={[0, 1.2, 0]}>
+                    <Head />
                 </group>
+
             </group>
         </group>
         <ContactShadows position={[0, 0.2, 0]} opacity={0.4} scale={10} blur={2} far={2} color="#0f172a" />

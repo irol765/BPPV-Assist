@@ -12,7 +12,7 @@ export const analyzeEyeMovement = async (
   try {
     // 限制帧数以符合 Payload 大小，取前 150 帧通常足够覆盖 10 秒
     // 这一点必须在前端做，减少网络传输量，避免 Vercel Function Body Size Limit (4.5MB)
-    const step = Math.floor(frames.length / 30);
+    const step = Math.max(1, Math.floor(frames.length / 30));
     const framesToSend = frames.filter((_, i) => i % step === 0).slice(0, 30);
 
     // 调用后端接口

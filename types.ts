@@ -33,6 +33,11 @@ export interface ManeuverStep {
   headPitch: number;  // Up/Down tilt. Positive = Chin tuck, Negative = Extension (hanging back)
   legAngle?: number;  // 0 = Legs straight on bed, 80 = Legs hanging down (Sitting)
   
+  // Joint Control
+  kneeAngle?: number; // 0=Straight, 90=Bent
+  armAngle?: number;  // 0=By side, 90=Forward
+  elbowAngle?: number;// 0=Straight, 90=Bent
+
   // Otolith Simulation
   otolithProgressStart: number; // 0 to 1 path progress
   otolithProgressEnd: number;   // 0 to 1 path progress

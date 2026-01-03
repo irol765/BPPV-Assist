@@ -243,7 +243,8 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           bodyRoll: 0,
           headYaw: 0,
           headPitch: -45, // Looking up
-          legAngle: 180, // Kneeling
+          legAngle: 90, // Vertical Thighs
+          kneeAngle: 90, // Kneeling
           otolithProgressStart: 0,
           otolithProgressEnd: 0.1,
         },
@@ -254,11 +255,12 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
             ? "像翻跟头一样，将头顶顶在地上，下巴尽量向膝盖处收紧（倒立位）。保持这个姿势。"
             : "Tuck head completely under like doing a somersault. Top of head on floor, chin tucked to knees.",
           durationSeconds: 30,
-          torsoAngle: 135, // Leaning forward (45 deg past vertical)
+          torsoAngle: 135, // Leaning forward
           bodyRoll: 0,
           headYaw: 0,
-          headPitch: 85, // Max tuck to look under
-          legAngle: 180, // Kneeling
+          headPitch: 85, // Max tuck
+          legAngle: 90,
+          kneeAngle: 90,
           otolithProgressStart: 0.1,
           otolithProgressEnd: 0.4,
         },
@@ -269,11 +271,12 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
             ? "保持头顶在地上的姿势不变，将面部向【右】侧手肘方向转动 45 度。"
             : "While keeping head on floor, turn face 45 degrees to the RIGHT elbow.",
           durationSeconds: 30,
-          torsoAngle: 135, // Maintain forward lean
+          torsoAngle: 135,
           bodyRoll: 0,
           headYaw: -45, // Right
-          headPitch: 85, // Still tucked
-          legAngle: 180, // Kneeling
+          headPitch: 85, 
+          legAngle: 90,
+          kneeAngle: 90,
           otolithProgressStart: 0.4,
           otolithProgressEnd: 0.6,
         },
@@ -284,11 +287,12 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
             ? "保持头部向右偏转的角度，利用双手支撑，快速将头部和背部抬起至水平位置（像四脚桌一样）。"
             : "Keeping head turned right, quickly raise head/back to horizontal (tabletop position).",
           durationSeconds: 30,
-          torsoAngle: 170, // Horizontal back (approx 170-180)
+          torsoAngle: 170, // Horizontal back
           bodyRoll: 0,
           headYaw: -45,
-          headPitch: -80, // Extended neck to look level while body is horizontal
-          legAngle: 180, // Kneeling
+          headPitch: -80, // Extended neck to look level
+          legAngle: 90,
+          kneeAngle: 90,
           otolithProgressStart: 0.6,
           otolithProgressEnd: 0.8,
         },
@@ -303,7 +307,8 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           bodyRoll: 0,
           headYaw: 0,
           headPitch: 0,
-          legAngle: 180, // Kneeling
+          legAngle: 90,
+          kneeAngle: 90,
           otolithProgressStart: 0.8,
           otolithProgressEnd: 1.0,
         }
@@ -331,7 +336,8 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           bodyRoll: 0,
           headYaw: 0,
           headPitch: -45,
-          legAngle: 180, // Kneeling
+          legAngle: 90,
+          kneeAngle: 90,
           otolithProgressStart: 0,
           otolithProgressEnd: 0.1,
         },
@@ -342,11 +348,12 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
             ? "头顶触地，下巴尽量收向膝盖（倒立位）。"
             : "Tuck head under like a somersault. Chin to knees.",
           durationSeconds: 30,
-          torsoAngle: 135, // Forward lean
+          torsoAngle: 135,
           bodyRoll: 0,
           headYaw: 0,
           headPitch: 85,
-          legAngle: 180, // Kneeling
+          legAngle: 90,
+          kneeAngle: 90,
           otolithProgressStart: 0.1,
           otolithProgressEnd: 0.4,
         },
@@ -357,11 +364,12 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
             ? "保持头顶在地，将面部向【左】侧手肘转动 45 度。"
             : "Turn face 45 degrees to the LEFT elbow.",
           durationSeconds: 30,
-          torsoAngle: 135, // Forward lean
+          torsoAngle: 135,
           bodyRoll: 0,
           headYaw: 45, // Left
           headPitch: 85,
-          legAngle: 180, // Kneeling
+          legAngle: 90,
+          kneeAngle: 90,
           otolithProgressStart: 0.4,
           otolithProgressEnd: 0.6,
         },
@@ -372,11 +380,12 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
             ? "保持头左偏，快速抬起头背至水平位置（四脚桌姿势）。"
             : "Raise head/back to tabletop position, keeping head turned left.",
           durationSeconds: 30,
-          torsoAngle: 170, // Horizontal back
+          torsoAngle: 170,
           bodyRoll: 0,
           headYaw: 45,
-          headPitch: -80, // Extended neck to look level
-          legAngle: 180, // Kneeling
+          headPitch: -80,
+          legAngle: 90,
+          kneeAngle: 90,
           otolithProgressStart: 0.6,
           otolithProgressEnd: 0.8,
         },
@@ -391,7 +400,8 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           bodyRoll: 0,
           headYaw: 0,
           headPitch: 0,
-          legAngle: 180, // Kneeling
+          legAngle: 90,
+          kneeAngle: 90,
           otolithProgressStart: 0.8,
           otolithProgressEnd: 1.0,
         }
@@ -460,25 +470,46 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
             : "Roll body to the LEFT until facing down. Support yourself on your elbows. Keep head slightly up, don't bury face in pillow.",
           durationSeconds: 30,
           torsoAngle: 0,
-          bodyRoll: -180, // Face down (rolled via left)
+          bodyRoll: -180, // Face down
+          armAngle: 45,   // Arms forward
+          elbowAngle: 90, // Elbows bent
           headYaw: 0,
-          headPitch: -20, // Slightly up/extended to keep face off mattress
+          headPitch: -30, // Head up
           otolithProgressStart: 0.6,
           otolithProgressEnd: 0.8,
         },
+        // NEW STEP: Intermediate transition for BBQ Right (Rolling onto Left Side)
         {
           id: 5,
-          title: isZh ? "步骤 5: 侧身垂腿坐起" : "Step 5: Side Sit Up",
+          title: isZh ? "步骤 4b: 转为侧卧" : "Step 4b: Roll to Side",
           description: isZh
-            ? "先将双腿移出床沿自然下垂，然后用手推床从侧面坐起。"
-            : "Swing legs off the edge to hang down, then push up with your hands to sit up from the side.",
-          durationSeconds: 30,
-          torsoAngle: 90,
-          bodyRoll: -90, // Sit up from side
+            ? "先从趴着的姿势转回左侧卧，并将双腿移出床沿，自然下垂，准备坐起。"
+            : "Roll from face down onto your LEFT side. Swing legs off the edge to hang down, preparing to sit up.",
+          durationSeconds: 15,
+          torsoAngle: 0,
+          bodyRoll: -90, // Left Side
+          armAngle: 0,
+          elbowAngle: 0,
           headYaw: 0,
           headPitch: 0,
-          legAngle: 85, // Legs hanging down
+          legAngle: 45, // Legs starting to hang
           otolithProgressStart: 0.8,
+          otolithProgressEnd: 0.9,
+        },
+        {
+          id: 6,
+          title: isZh ? "步骤 5: 侧身坐起" : "Step 5: Sit Up",
+          description: isZh
+            ? "用手推床，从侧面坐起，保持直立。"
+            : "Push up with your hands to sit up from the side. Stay upright.",
+          durationSeconds: 30,
+          torsoAngle: 90,
+          bodyRoll: -90, 
+          headYaw: 0,
+          headPitch: 0,
+          legAngle: 90,
+          kneeAngle: 90, // Legs hanging down
+          otolithProgressStart: 0.9,
           otolithProgressEnd: 1.0,
         }
       ]
@@ -544,25 +575,46 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
             : "Roll body to the RIGHT until facing down. Support yourself on your elbows. Keep head slightly up.",
           durationSeconds: 30,
           torsoAngle: 0,
-          bodyRoll: 180, // Face down (rolled via right)
+          bodyRoll: 180, // Face down
+          armAngle: 45,   // Arms forward
+          elbowAngle: 90, // Elbows bent
           headYaw: 0,
-          headPitch: -20, // Slightly up
+          headPitch: -30, // Head up
           otolithProgressStart: 0.6,
           otolithProgressEnd: 0.8,
         },
+        // NEW STEP: Intermediate transition for BBQ Left (Rolling onto Right Side)
         {
           id: 5,
-          title: isZh ? "步骤 5: 侧身垂腿坐起" : "Step 5: Side Sit Up",
+          title: isZh ? "步骤 4b: 转为侧卧" : "Step 4b: Roll to Side",
           description: isZh
-            ? "先将双腿移出床沿自然下垂，然后用手推床从侧面坐起。"
-            : "Swing legs off the edge to hang down, then push up with your hands to sit up from the side.",
+            ? "先从趴着的姿势转回右侧卧，并将双腿移出床沿，自然下垂，准备坐起。"
+            : "Roll from face down onto your RIGHT side. Swing legs off the edge to hang down, preparing to sit up.",
+          durationSeconds: 15,
+          torsoAngle: 0,
+          bodyRoll: 90, // Right Side
+          armAngle: 0,
+          elbowAngle: 0,
+          headYaw: 0,
+          headPitch: 0,
+          legAngle: 45, // Legs starting to hang
+          otolithProgressStart: 0.8,
+          otolithProgressEnd: 0.9,
+        },
+        {
+          id: 6,
+          title: isZh ? "步骤 5: 侧身坐起" : "Step 5: Sit Up",
+          description: isZh
+            ? "用手推床，从侧面坐起，保持直立。"
+            : "Push up with your hands to sit up from the side. Stay upright.",
           durationSeconds: 30,
           torsoAngle: 90,
           bodyRoll: 90,
           headYaw: 0,
           headPitch: 0,
-          legAngle: 85, // Legs hanging down
-          otolithProgressStart: 0.8,
+          legAngle: 85,
+          kneeAngle: 90, // Legs hanging down
+          otolithProgressStart: 0.9,
           otolithProgressEnd: 1.0,
         }
       ]
