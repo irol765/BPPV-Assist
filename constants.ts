@@ -243,6 +243,7 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           bodyRoll: 0,
           headYaw: 0,
           headPitch: -45, // Looking up
+          legAngle: 180, // Kneeling
           otolithProgressStart: 0,
           otolithProgressEnd: 0.1,
         },
@@ -257,6 +258,7 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           bodyRoll: 0,
           headYaw: 0,
           headPitch: 85, // Max tuck to look under
+          legAngle: 180, // Kneeling
           otolithProgressStart: 0.1,
           otolithProgressEnd: 0.4,
         },
@@ -271,6 +273,7 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           bodyRoll: 0,
           headYaw: -45, // Right
           headPitch: 85, // Still tucked
+          legAngle: 180, // Kneeling
           otolithProgressStart: 0.4,
           otolithProgressEnd: 0.6,
         },
@@ -285,6 +288,7 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           bodyRoll: 0,
           headYaw: -45,
           headPitch: -80, // Extended neck to look level while body is horizontal
+          legAngle: 180, // Kneeling
           otolithProgressStart: 0.6,
           otolithProgressEnd: 0.8,
         },
@@ -299,6 +303,7 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           bodyRoll: 0,
           headYaw: 0,
           headPitch: 0,
+          legAngle: 180, // Kneeling
           otolithProgressStart: 0.8,
           otolithProgressEnd: 1.0,
         }
@@ -326,6 +331,7 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           bodyRoll: 0,
           headYaw: 0,
           headPitch: -45,
+          legAngle: 180, // Kneeling
           otolithProgressStart: 0,
           otolithProgressEnd: 0.1,
         },
@@ -340,6 +346,7 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           bodyRoll: 0,
           headYaw: 0,
           headPitch: 85,
+          legAngle: 180, // Kneeling
           otolithProgressStart: 0.1,
           otolithProgressEnd: 0.4,
         },
@@ -354,6 +361,7 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           bodyRoll: 0,
           headYaw: 45, // Left
           headPitch: 85,
+          legAngle: 180, // Kneeling
           otolithProgressStart: 0.4,
           otolithProgressEnd: 0.6,
         },
@@ -368,6 +376,7 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           bodyRoll: 0,
           headYaw: 45,
           headPitch: -80, // Extended neck to look level
+          legAngle: 180, // Kneeling
           otolithProgressStart: 0.6,
           otolithProgressEnd: 0.8,
         },
@@ -382,6 +391,7 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           bodyRoll: 0,
           headYaw: 0,
           headPitch: 0,
+          legAngle: 180, // Kneeling
           otolithProgressStart: 0.8,
           otolithProgressEnd: 1.0,
         }
@@ -444,29 +454,30 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
         },
         {
           id: 4,
-          title: isZh ? "步骤 4: 翻身趴下" : "Step 4: Roll to Face Down",
+          title: isZh ? "步骤 4: 翻身趴下 (肘部支撑)" : "Step 4: Face Down (On Elbows)",
           description: isZh
-            ? "身体向【左】翻转，直到面部朝下（趴在床上）。头部跟随身体转动，稍微低头支撑在前臂上。"
-            : "Roll body to the LEFT until you are facing down. Support yourself on elbows.",
+            ? "身体向【左】翻转，直到面部朝下（趴在床上）。用双肘支撑床面，保持头部稍稍抬起，不要闷在枕头里。"
+            : "Roll body to the LEFT until facing down. Support yourself on your elbows. Keep head slightly up, don't bury face in pillow.",
           durationSeconds: 30,
           torsoAngle: 0,
           bodyRoll: -180, // Face down (rolled via left)
           headYaw: 0,
-          headPitch: 0,
+          headPitch: -20, // Slightly up/extended to keep face off mattress
           otolithProgressStart: 0.6,
           otolithProgressEnd: 0.8,
         },
         {
           id: 5,
-          title: isZh ? "步骤 5: 坐起" : "Step 5: Sit Up",
+          title: isZh ? "步骤 5: 侧身垂腿坐起" : "Step 5: Side Sit Up",
           description: isZh
-            ? "从侧面慢慢坐起。"
-            : "Slowly sit up from the side.",
+            ? "先将双腿移出床沿自然下垂，然后用手推床从侧面坐起。"
+            : "Swing legs off the edge to hang down, then push up with your hands to sit up from the side.",
           durationSeconds: 30,
           torsoAngle: 90,
           bodyRoll: -90, // Sit up from side
           headYaw: 0,
           headPitch: 0,
+          legAngle: 85, // Legs hanging down
           otolithProgressStart: 0.8,
           otolithProgressEnd: 1.0,
         }
@@ -527,29 +538,30 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
         },
         {
           id: 4,
-          title: isZh ? "步骤 4: 翻身趴下" : "Step 4: Roll to Face Down",
+          title: isZh ? "步骤 4: 翻身趴下 (肘部支撑)" : "Step 4: Face Down (On Elbows)",
           description: isZh
-            ? "身体向【右】翻转，直到面部朝下（趴在床上）。"
-            : "Roll body to the RIGHT until you are facing down.",
+            ? "身体向【右】翻转，直到面部朝下（趴在床上）。用双肘支撑床面，保持头部稍稍抬起，不要闷在枕头里。"
+            : "Roll body to the RIGHT until facing down. Support yourself on your elbows. Keep head slightly up.",
           durationSeconds: 30,
           torsoAngle: 0,
           bodyRoll: 180, // Face down (rolled via right)
           headYaw: 0,
-          headPitch: 0,
+          headPitch: -20, // Slightly up
           otolithProgressStart: 0.6,
           otolithProgressEnd: 0.8,
         },
         {
           id: 5,
-          title: isZh ? "步骤 5: 坐起" : "Step 5: Sit Up",
+          title: isZh ? "步骤 5: 侧身垂腿坐起" : "Step 5: Side Sit Up",
           description: isZh
-            ? "从侧面慢慢坐起。"
-            : "Slowly sit up.",
+            ? "先将双腿移出床沿自然下垂，然后用手推床从侧面坐起。"
+            : "Swing legs off the edge to hang down, then push up with your hands to sit up from the side.",
           durationSeconds: 30,
           torsoAngle: 90,
           bodyRoll: 90,
           headYaw: 0,
           headPitch: 0,
+          legAngle: 85, // Legs hanging down
           otolithProgressStart: 0.8,
           otolithProgressEnd: 1.0,
         }
