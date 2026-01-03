@@ -284,11 +284,11 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           bodyRoll: 0,
           headYaw: 0,
           headPitch: 85, // Max tuck
-          legAngle: 0,
+          legAngle: 45, // FIXED: Hips flexed 45 deg to allow torso to lean forward naturally
           kneeAngle: 90,
-          armAngle: 120,
-          elbowAngle: 45,
-          yOffset: 0.4,
+          armAngle: 150, // FIXED: Arms more forward/up to support
+          elbowAngle: 80,
+          yOffset: 0.6, // FIXED: Higher offset
           otolithProgressStart: 0.1,
           otolithProgressEnd: 0.4,
         },
@@ -303,11 +303,11 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           bodyRoll: 0,
           headYaw: -45, // Right
           headPitch: 85, 
-          legAngle: 0,
+          legAngle: 45, // FIXED: Matches Step 2
           kneeAngle: 90,
-          armAngle: 120,
-          elbowAngle: 45,
-          yOffset: 0.4,
+          armAngle: 150, // FIXED
+          elbowAngle: 80,
+          yOffset: 0.6, // FIXED
           otolithProgressStart: 0.4,
           otolithProgressEnd: 0.6,
         },
@@ -326,7 +326,7 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           kneeAngle: 90,
           armAngle: 90, // Arms support (vertical)
           elbowAngle: 0,
-          yOffset: 0.4, // FIXED: Increased offset to prevent clipping
+          yOffset: 0.4, 
           otolithProgressStart: 0.6,
           otolithProgressEnd: 0.8,
         },
@@ -390,11 +390,11 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           bodyRoll: 0,
           headYaw: 0,
           headPitch: 85,
-          legAngle: 0,
+          legAngle: 45, // FIXED
           kneeAngle: 90,
-          armAngle: 120,
-          elbowAngle: 45,
-          yOffset: 0.4,
+          armAngle: 150, // FIXED
+          elbowAngle: 80,
+          yOffset: 0.6, // FIXED
           otolithProgressStart: 0.1,
           otolithProgressEnd: 0.4,
         },
@@ -409,11 +409,11 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           bodyRoll: 0,
           headYaw: 45, // Left
           headPitch: 85,
-          legAngle: 0,
+          legAngle: 45, // FIXED
           kneeAngle: 90,
-          armAngle: 120,
-          elbowAngle: 45,
-          yOffset: 0.4,
+          armAngle: 150, // FIXED
+          elbowAngle: 80,
+          yOffset: 0.6, // FIXED
           otolithProgressStart: 0.4,
           otolithProgressEnd: 0.6,
         },
@@ -432,7 +432,7 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           kneeAngle: 90,
           armAngle: 90, // Tabletop support
           elbowAngle: 0,
-          yOffset: 0.4, // FIXED: Increased offset
+          yOffset: 0.4, 
           otolithProgressStart: 0.6,
           otolithProgressEnd: 0.8,
         },
@@ -534,7 +534,7 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           headPitch: -30, // Head up
           legAngle: 0,
           kneeAngle: 0,
-          yOffset: 0,
+          yOffset: 0.25, // FIXED: Lift body to prevent clipping
           otolithProgressStart: 0.6,
           otolithProgressEnd: 0.8,
         },
@@ -654,7 +654,7 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           headPitch: -30, // Head up
           legAngle: 0,
           kneeAngle: 0,
-          yOffset: 0,
+          yOffset: 0.25, // FIXED: Lift body
           otolithProgressStart: 0.6,
           otolithProgressEnd: 0.8,
         },

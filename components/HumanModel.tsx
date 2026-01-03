@@ -263,7 +263,8 @@ const Scene: React.FC<HumanModelProps> = ({
 
     // 1. Layer 1: Orientation (Global Yaw)
     if (orientationRef.current) {
-        const radYaw = THREE.MathUtils.degToRad(bodyYaw);
+        // FIXED: Negated bodyYaw to correct rotation direction
+        const radYaw = THREE.MathUtils.degToRad(-bodyYaw);
         orientationRef.current.rotation.y = THREE.MathUtils.damp(orientationRef.current.rotation.y, radYaw, dampFactor, delta);
     }
 
@@ -278,7 +279,8 @@ const Scene: React.FC<HumanModelProps> = ({
     // 3. Layer 3: Spine Roll (Roll)
     // Rotation around the spine axis (Local Y)
     if (rollRef.current) {
-        const radRoll = THREE.MathUtils.degToRad(bodyRoll);
+        // FIXED: Negated bodyRoll to correct rotation direction
+        const radRoll = THREE.MathUtils.degToRad(-bodyRoll);
         rollRef.current.rotation.y = THREE.MathUtils.damp(rollRef.current.rotation.y, radRoll, dampFactor, delta);
     }
 
