@@ -4,6 +4,7 @@ import { RoundedBox, Sphere, Cylinder, Box, ContactShadows, OrbitControls, Plane
 import * as THREE from 'three';
 
 // Fix for missing R3F types in this file context
+// Augmenting both global JSX and React.JSX to ensure compatibility with different React type versions
 declare global {
   namespace JSX {
     interface IntrinsicElements {
@@ -17,6 +18,23 @@ declare global {
       spotLight: any;
       pointLight: any;
       primitive: any;
+    }
+  }
+  
+  namespace React {
+    namespace JSX {
+      interface IntrinsicElements {
+        group: any;
+        mesh: any;
+        meshStandardMaterial: any;
+        meshPhysicalMaterial: any;
+        meshBasicMaterial: any;
+        ambientLight: any;
+        directionalLight: any;
+        spotLight: any;
+        pointLight: any;
+        primitive: any;
+      }
     }
   }
 }

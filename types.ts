@@ -26,8 +26,8 @@ export interface ManeuverStep {
   durationSeconds: number;
   
   // Animation Physics Targets
-  torsoAngle: number; // 90 = sitting up, 0 = lying flat
-  bodyRoll: number;   // 0 = flat on back, 90 = right side, -90 = left side
+  torsoAngle: number; // 90 = sitting up, 0 = lying flat, 45 = leaning forward
+  bodyRoll: number;   // 0 = flat on back, 90 = right side, -90 = left side, 180 = face down
   bodyYaw?: number;   // Rotation of the whole body on bed. 0 = feet at footboard. 90 = facing left edge.
   headYaw: number;    // Left/Right rotation (degrees). Positive = Left, Negative = Right
   headPitch: number;  // Up/Down tilt. Positive = Chin tuck, Negative = Extension (hanging back)
@@ -42,6 +42,7 @@ export interface Maneuver {
   id: string;
   name: string;
   description: string;
+  difficulty: 'Easy' | 'Medium' | 'Hard'; // Added difficulty
   precautions: string[];
   recommendedFor: {
     canal: CanalType;

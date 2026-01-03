@@ -10,48 +10,58 @@ export const analyzeEyeMovement = async (
   testSide: Side | 'UNKNOWN' = 'UNKNOWN' 
 ): Promise<DiagnosisResult> => {
   
+  // 构造针对不同语言的输出要求
+  const langInstruction = lang === 'zh' 
+    ? "Provide the 'reasoning' field in Simplified Chinese (简体中文)." 
+    : "Provide the 'reasoning' field in English.";
+
   const systemInstruction = `
-    You are an expert Otolaryngologist analyzing a Dix-Hallpike test video.
+    You are an expert Otolaryngologist analyzing a video recording of a Dix-Hallpike or Roll test.
     
     **CONTEXT:**
-    - Patient is performing the Dix-Hallpike maneuver on the **${testSide}** side.
-    - Camera: Front-facing, low light conditions expected.
+    - The video shows a close-up of a patient's eyes during a provocation maneuver.
+    - **Test Side:** The patient is testing the **${testSide}** side.
+    - **Environment:** Front-facing selfie camera, likely low light. 
+    - **Focus:** Track the movement of the pupil, iris striations, or scleral blood vessels (red veins) to detect rotation.
+
+    **DIAGNOSTIC CRITERIA (Classify based on Nystagmus Direction):**
     
-    **YOUR TASK: VERIFY THE HYPOTHESIS**
-    Hypothesis: "The patient has BPPV in the ${testSide} ear."
+    1. **POSTERIOR Canal (BPPV Type: Common)**
+       - **Visual Sign:** Mixed **UP-beating** (vertical) AND **Torsional** (rotary) nystagmus.
+       - The top pole of the eye beats toward the affected ear (ground).
     
-    **ANALYSIS LOGIC:**
-    1.  **Look for Nystagmus:** Scrutinize the eyes for ANY rhythmic beating (vertical, torsional, or horizontal).
-        - *Tip:* In low light, track scleral vessels (red veins) or pupil edges.
+    2. **HORIZONTAL Canal (BPPV Type: Less Common)**
+       - **Visual Sign:** Pure **HORIZONTAL** nystagmus.
+       - Can be Geotropic (beating towards ground) or Apogeotropic (beating towards sky).
     
-    2.  **Evaluate Findings against Context:**
-        - **SCENARIO A (Consistent):** You see nystagmus. 
-          -> CONCLUSION: The maneuver on the ${testSide} side PROVOKED symptoms. **Confirm ${testSide} BPPV.**
-          -> Set \`hasBPPV: true\`, \`side: ${testSide}\`.
-          
-        - **SCENARIO B (Negative):** You see NO nystagmus (eyes are stable), even if the patient claims dizziness.
-          -> CONCLUSION: The maneuver on the ${testSide} side did NOT provoke objective signs.
-          -> Set \`hasBPPV: false\`.
-          
-        - **SCENARIO C (Contradictory - Rare):** You see clear nystagmus, but the direction strongly suggests the *opposite* canal (e.g., pure downbeating).
-          -> CONCLUSION: Complex case. Report the nystagmus but lower confidence on the side.
-    
+    3. **ANTERIOR Canal (BPPV Type: Rare)**
+       - **Visual Sign:** Mainly **DOWN-beating** nystagmus.
+       - Sometimes with a slight torsional component.
+
+    **ANALYSIS TASKS:**
+    1. **Detection:** Is there ANY rhythmic, involuntary eye movement? (Ignore blinks or voluntary looking around).
+    2. **Classification:** If movement exists, identify the primary direction (Up/Down/Horizontal/Rotary).
+    3. **Conclusion:** 
+       - If **Upbeating + Torsional**: Set canal="Posterior".
+       - If **Horizontal**: Set canal="Horizontal".
+       - If **Downbeating**: Set canal="Anterior".
+       - If **No Nystagmus**: Set hasBPPV=false.
+
     **OUTPUT RULES:**
-    - **hasBPPV**: true only if objective nystagmus is visible.
-    - **side**: If hasBPPV is true, verify if it aligns with **${testSide}**. (In 95% of home cases, Provocation Side = Affected Side).
-    - **reasoning**: Explain clearly based on the context.
-      - Example (Positive): "在${testSide === 'Left' ? '左' : '右'}侧卧位激发出了明显的眼震，确认是${testSide === 'Left' ? '左' : '右'}侧耳石症。"
-      - Example (Negative): "虽然您可能感到眩晕，但未检测到眼震。请尝试测试另一侧。"
+    - **hasBPPV**: true only if specific nystagmus patterns are identified.
+    - **side**: If hasBPPV is true, usually matches the **${testSide}**. If the nystagmus is clearly contradictory to the test side (e.g., strong downbeating suggesting Anterior contralateral), output the medically deduced side.
+    - **reasoning**: ${langInstruction} Explain strictly what you see (e.g., "Detected upbeating torsional nystagmus...").
   `;
 
   try {
+    // 限制帧数以符合 Payload 大小，取前 150 帧通常足够覆盖 10 秒
     const framesToSend = frames.slice(0, 150);
     const parts = framesToSend.map(frame => ({
         inlineData: { mimeType: "image/jpeg", data: frame.split(',')[1] }
     }));
 
     parts.push({ 
-        text: `Patient is testing ${testSide} side. Verify if this maneuver provokes nystagmus.` 
+        text: `Patient is testing the ${testSide} side. Analyze the eye movement pattern (Up/Down/Horizontal/Torsional) and identify the affected canal.` 
     } as any);
 
     const response = await ai.models.generateContent({
@@ -66,7 +76,7 @@ export const analyzeEyeMovement = async (
             hasBPPV: { type: Type.BOOLEAN },
             side: { type: Type.STRING, enum: ["Left", "Right"] },
             canal: { type: Type.STRING, enum: ["Posterior", "Horizontal", "Anterior"] },
-            confidence: { type: Type.NUMBER },
+            confidence: { type: Type.NUMBER, description: "0.0 to 1.0" },
             reasoning: { type: Type.STRING }
           },
           required: ["hasBPPV", "confidence", "reasoning"]
@@ -80,10 +90,9 @@ export const analyzeEyeMovement = async (
 
     return {
       hasBPPV: result.hasBPPV,
-      // 这里的逻辑稍微放松，如果 AI 明确返回了 Side 就用 AI 的，
-      // 如果 AI 没返回 Side 但确认有病，才兜底使用 testSide
+      // 如果 AI 检测出病变但未指明侧别，且我们知道测试侧，则兜底使用测试侧
       side: result.side as Side || (result.hasBPPV && testSide !== 'UNKNOWN' ? testSide : undefined),
-      canal: result.canal as CanalType,
+      canal: result.canal as CanalType, // 现在 AI 会根据眼震方向准确返回类型
       confidence: result.confidence,
       reasoning: result.reasoning
     };
@@ -93,7 +102,7 @@ export const analyzeEyeMovement = async (
     return {
       hasBPPV: false,
       confidence: 0,
-      reasoning: lang === 'zh' ? "分析中断，请重试。" : "Analysis failed."
+      reasoning: lang === 'zh' ? "AI 分析服务连接中断，请检查网络或稍后重试。" : "AI Analysis interrupted. Please check network."
     };
   }
 };

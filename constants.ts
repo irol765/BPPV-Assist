@@ -1,6 +1,4 @@
-
-
-import { Maneuver, CanalType, Language } from './types';
+import { Maneuver, CanalType, Language, Side } from './types';
 
 export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
   const isZh = lang === 'zh';
@@ -21,25 +19,35 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
         "Seek medical attention if dizziness persists or worsens."
       ];
 
+  const fosterDescription = isZh
+    ? "Foster 半筋斗复位法。不需要像 Epley 那样头部悬空，适合颈椎不适或在家自救的患者。动作类似跪姿翻跟头。"
+    : "The Foster (Half-Somersault) maneuver. An alternative to Epley that doesn't require hanging the head off the bed. Easier to perform alone.";
+
+  const bbqDescription = isZh
+    ? "BBQ 翻滚法 (Lempert)。专门用于治疗【水平半规管】耳石症（表现为躺下翻身时晕）。需要全身 360 度翻滚。"
+    : "The BBQ (Lempert) Roll. Designed for Horizontal Canal BPPV. Involves rolling 360 degrees while lying down.";
+
   return {
+    // --- EPLEY (Posterior Canal) ---
     EPLEY_RIGHT: {
       id: 'epley_right',
-      name: isZh ? "Epley 复位法 (右耳)" : "Epley Maneuver (Right Ear)",
+      name: isZh ? "Epley 复位法 (右耳)" : "Epley Maneuver (Right)",
       description: isZh 
-        ? "治疗右侧后半规管耳石症的标准复位方法。"
-        : "The standard maneuver for treating right posterior canal BPPV.",
+        ? "治疗右侧后半规管耳石症的金标准方法。需要床沿悬头。"
+        : "Gold standard for Right Posterior Canal BPPV. Requires head hanging.",
+      difficulty: 'Medium',
       precautions: commonPrecautions,
       recommendedFor: {
         canal: CanalType.POSTERIOR,
-        side: Object.values(CanalType).includes('Right' as any) ? undefined : undefined
+        side: Side.RIGHT
       },
       steps: [
         {
           id: 1,
           title: isZh ? "步骤 1: 端坐转头" : "Step 1: Sit & Turn",
           description: isZh 
-            ? "坐在床边，双腿伸直。头部向【右】转 45 度。此举是为了让右后半规管与身体纵轴平行。"
-            : "Sit on the bed with legs extended. Turn your head 45 degrees to the RIGHT. This aligns the posterior canal.",
+            ? "坐在床边，双腿伸直。头部向【右】转 45 度。"
+            : "Sit on the bed with legs extended. Turn your head 45 degrees to the RIGHT.",
           durationSeconds: 15,
           torsoAngle: 90, 
           bodyRoll: 0,
@@ -52,10 +60,10 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
         },
         {
           id: 2,
-          title: isZh ? "步骤 2: 快速仰卧 (悬头位)" : "Step 2: Lie Back (Head Hanging)",
+          title: isZh ? "步骤 2: 快速仰卧 (悬头)" : "Step 2: Lie Back",
           description: isZh
-            ? "保持头部向右 45 度，快速向后躺下。务必让头部悬空或枕在肩下，使头后仰约 30 度。这是最关键的一步，耳石开始从壶腹滑出。"
-            : "Quickly lie back keeping head turned right. Head must hang extended 30 degrees over the edge/pillow. Stones move away from ampulla.",
+            ? "保持头部向右 45 度，快速向后躺下。头部悬空后仰约 30 度。这是最关键的一步。"
+            : "Quickly lie back keeping head turned right. Head must hang extended 30 degrees.",
           durationSeconds: 60,
           torsoAngle: 0,  
           bodyRoll: 0,
@@ -70,8 +78,8 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           id: 3,
           title: isZh ? "步骤 3: 向左转头" : "Step 3: Turn Head Left",
           description: isZh
-            ? "身体不要动，缓慢将头向【左】转 90 度。此时你的头应向左偏 45 度。耳石继续沿着管壁滑动。"
-            : "Without moving body, turn head 90 degrees to LEFT. You are now looking 45 degrees left. Stones traverse the canal arc.",
+            ? "身体不动，缓慢将头向【左】转 90 度。此时头向左偏 45 度。"
+            : "Turn head 90 degrees to LEFT. You are now looking 45 degrees left.",
           durationSeconds: 60,
           torsoAngle: 0,
           bodyRoll: 0,
@@ -84,10 +92,10 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
         },
         {
           id: 4,
-          title: isZh ? "步骤 4: 身体左转 (侧卧)" : "Step 4: Roll Body Left",
+          title: isZh ? "步骤 4: 侧身低头" : "Step 4: Roll Body Left",
           description: isZh
-            ? "身体向【左】转 90 度，变为左侧卧。头部跟随身体转动，下巴收紧贴向肩膀，视线看向地面。耳石进入总脚。"
-            : "Turn body 90 degrees LEFT onto shoulder. Head turns with body, tuck chin to look at floor. Stones enter common crus.",
+            ? "身体向【左】转 90 度变为侧卧。头部跟随转动，下巴收紧贴向肩膀，视线看地面。"
+            : "Turn body 90 degrees LEFT onto shoulder. Tuck chin to look at floor.",
           durationSeconds: 60,
           torsoAngle: 0,
           bodyRoll: -90,  
@@ -100,19 +108,17 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
         },
         {
           id: 5,
-          title: isZh ? "步骤 5: 垂腿侧身坐起" : "Step 5: Drop Legs & Side Sit Up",
+          title: isZh ? "步骤 5: 坐起" : "Step 5: Sit Up",
           description: isZh
-            ? "保持下巴内收。将双腿移出床沿自然下垂。用手臂支撑，侧身坐起，最终坐在床边。"
-            : "Keep chin tucked. Swing your legs off the side of the bed. Push up with your arms to sit up on the edge of the bed.",
+            ? "保持下巴内收，将双腿移出床沿，侧身坐起。"
+            : "Keep chin tucked. Swing legs off bed and push up to sit.",
           durationSeconds: 60,
-          // Physics: Side Sit Up. 
-          // Move body to edge (BodyYaw 90 implies facing Left edge).
           torsoAngle: 90, 
           bodyRoll: 0,    
-          bodyYaw: 90, // Face Left Edge
+          bodyYaw: 90, 
           headYaw: 0,
           headPitch: 20, 
-          legAngle: 85, // Legs drop down
+          legAngle: 85,
           otolithProgressStart: 0.85,
           otolithProgressEnd: 1.0,
         }
@@ -120,13 +126,15 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
     },
     EPLEY_LEFT: {
       id: 'epley_left',
-      name: isZh ? "Epley 复位法 (左耳)" : "Epley Maneuver (Left Ear)",
+      name: isZh ? "Epley 复位法 (左耳)" : "Epley Maneuver (Left)",
       description: isZh
-        ? "治疗左侧后半规管耳石症的标准复位方法。"
-        : "Standard maneuver for Left Posterior Canal BPPV.",
+        ? "治疗左侧后半规管耳石症的金标准方法。需要床沿悬头。"
+        : "Gold standard for Left Posterior Canal BPPV.",
+      difficulty: 'Medium',
       precautions: commonPrecautions,
       recommendedFor: {
         canal: CanalType.POSTERIOR,
+        side: Side.LEFT
       },
       steps: [
         {
@@ -139,7 +147,7 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           torsoAngle: 90,
           bodyRoll: 0,
           bodyYaw: 0,
-          headYaw: 45, // Left
+          headYaw: 45,
           headPitch: 0,
           legAngle: 0,
           otolithProgressStart: 0,
@@ -179,7 +187,7 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
         },
         {
           id: 4,
-          title: isZh ? "步骤 4: 身体右转" : "Step 4: Roll Body Right",
+          title: isZh ? "步骤 4: 侧身低头" : "Step 4: Roll Body Right",
           description: isZh
             ? "身体向【右】转 90 度侧卧。低头看地面。"
             : "Roll body 90 deg RIGHT. Tuck chin, look at floor.",
@@ -195,19 +203,354 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
         },
         {
           id: 5,
-          title: isZh ? "步骤 5: 垂腿侧身坐起" : "Step 5: Drop Legs & Side Sit Up",
+          title: isZh ? "步骤 5: 坐起" : "Step 5: Sit Up",
           description: isZh
-            ? "保持下巴内收。将双腿移出床沿自然下垂。用手臂支撑，侧身坐起，最终坐在床边。"
-            : "Keep chin tucked. Swing your legs off the side of the bed. Push up with your arms to sit up on the edge of the bed.",
+            ? "保持下巴内收，侧身坐起。"
+            : "Keep chin tucked and sit up.",
           durationSeconds: 60,
-          // Physics: Side Sit Up
           torsoAngle: 90,
           bodyRoll: 0,
-          bodyYaw: -90, // Face Right Edge
+          bodyYaw: -90,
           headYaw: 0,
           headPitch: 20,
           legAngle: 85,
           otolithProgressStart: 0.85,
+          otolithProgressEnd: 1.0,
+        }
+      ]
+    },
+
+    // --- FOSTER (Half-Somersault) ---
+    FOSTER_RIGHT: {
+      id: 'foster_right',
+      name: isZh ? "Foster 半筋斗法 (右耳)" : "Foster Maneuver (Right)",
+      description: fosterDescription,
+      difficulty: 'Easy',
+      precautions: commonPrecautions,
+      recommendedFor: {
+        canal: CanalType.POSTERIOR,
+        side: Side.RIGHT
+      },
+      steps: [
+        {
+          id: 1,
+          title: isZh ? "步骤 1: 跪姿仰头" : "Step 1: Kneel & Look Up",
+          description: isZh 
+            ? "跪在地上（或坐在脚后跟上）。双手撑地，头部尽量向后仰，以此作为起始位置。"
+            : "Kneel on the floor. Hands on floor. Tip head straight UP at ceiling.",
+          durationSeconds: 15,
+          torsoAngle: 90, // Kneeling upright roughly
+          bodyRoll: 0,
+          headYaw: 0,
+          headPitch: -45, // Looking up
+          otolithProgressStart: 0,
+          otolithProgressEnd: 0.1,
+        },
+        {
+          id: 2,
+          title: isZh ? "步骤 2: 低头翻跟头" : "Step 2: Somersault Tuck",
+          description: isZh
+            ? "像翻跟头一样，将头顶顶在地上，下巴尽量向膝盖处收紧（倒立位）。保持这个姿势。"
+            : "Tuck head completely under like doing a somersault. Top of head on floor, chin tucked to knees.",
+          durationSeconds: 30,
+          torsoAngle: 90, 
+          bodyRoll: 0,
+          headYaw: 0,
+          headPitch: 85, // Max tuck
+          otolithProgressStart: 0.1,
+          otolithProgressEnd: 0.4,
+        },
+        {
+          id: 3,
+          title: isZh ? "步骤 3: 转头看向患侧" : "Step 3: Turn Head Right",
+          description: isZh
+            ? "保持头顶在地上的姿势不变，将面部向【右】侧手肘方向转动 45 度。"
+            : "While keeping head on floor, turn face 45 degrees to the RIGHT elbow.",
+          durationSeconds: 30,
+          torsoAngle: 90,
+          bodyRoll: 0,
+          headYaw: -45, // Right
+          headPitch: 85, // Still tucked
+          otolithProgressStart: 0.4,
+          otolithProgressEnd: 0.6,
+        },
+        {
+          id: 4,
+          title: isZh ? "步骤 4: 快速抬头平背" : "Step 4: Raise Head to Level",
+          description: isZh
+            ? "保持头部向右偏转的角度，利用双手支撑，快速将头部和背部抬起至水平位置（像四脚桌一样）。"
+            : "Keeping head turned right, quickly raise head/back to horizontal (tabletop position).",
+          durationSeconds: 30,
+          torsoAngle: 45, // Leaning forward/Tabletop
+          bodyRoll: 0,
+          headYaw: -45,
+          headPitch: 0, // Level with back
+          otolithProgressStart: 0.6,
+          otolithProgressEnd: 0.8,
+        },
+        {
+          id: 5,
+          title: isZh ? "步骤 5: 直立" : "Step 5: Upright",
+          description: isZh
+            ? "保持头部偏转，慢慢直立起上身。最后将头转回正前方。"
+            : "Slowly kneel upright. Then turn head forward.",
+          durationSeconds: 30,
+          torsoAngle: 90,
+          bodyRoll: 0,
+          headYaw: 0,
+          headPitch: 0,
+          otolithProgressStart: 0.8,
+          otolithProgressEnd: 1.0,
+        }
+      ]
+    },
+    FOSTER_LEFT: {
+      id: 'foster_left',
+      name: isZh ? "Foster 半筋斗法 (左耳)" : "Foster Maneuver (Left)",
+      description: fosterDescription,
+      difficulty: 'Easy',
+      precautions: commonPrecautions,
+      recommendedFor: {
+        canal: CanalType.POSTERIOR,
+        side: Side.LEFT
+      },
+      steps: [
+        {
+          id: 1,
+          title: isZh ? "步骤 1: 跪姿仰头" : "Step 1: Kneel & Look Up",
+          description: isZh 
+            ? "跪在地上。双手撑地，头部尽量向后仰。"
+            : "Kneel on floor. Look straight up at ceiling.",
+          durationSeconds: 15,
+          torsoAngle: 90,
+          bodyRoll: 0,
+          headYaw: 0,
+          headPitch: -45,
+          otolithProgressStart: 0,
+          otolithProgressEnd: 0.1,
+        },
+        {
+          id: 2,
+          title: isZh ? "步骤 2: 低头翻跟头" : "Step 2: Somersault Tuck",
+          description: isZh
+            ? "头顶触地，下巴尽量收向膝盖（倒立位）。"
+            : "Tuck head under like a somersault. Chin to knees.",
+          durationSeconds: 30,
+          torsoAngle: 90,
+          bodyRoll: 0,
+          headYaw: 0,
+          headPitch: 85,
+          otolithProgressStart: 0.1,
+          otolithProgressEnd: 0.4,
+        },
+        {
+          id: 3,
+          title: isZh ? "步骤 3: 转头看向患侧" : "Step 3: Turn Head Left",
+          description: isZh
+            ? "保持头顶在地，将面部向【左】侧手肘转动 45 度。"
+            : "Turn face 45 degrees to the LEFT elbow.",
+          durationSeconds: 30,
+          torsoAngle: 90,
+          bodyRoll: 0,
+          headYaw: 45, // Left
+          headPitch: 85,
+          otolithProgressStart: 0.4,
+          otolithProgressEnd: 0.6,
+        },
+        {
+          id: 4,
+          title: isZh ? "步骤 4: 快速抬头平背" : "Step 4: Raise Head to Level",
+          description: isZh
+            ? "保持头左偏，快速抬起头背至水平位置（四脚桌姿势）。"
+            : "Raise head/back to tabletop position, keeping head turned left.",
+          durationSeconds: 30,
+          torsoAngle: 45,
+          bodyRoll: 0,
+          headYaw: 45,
+          headPitch: 0,
+          otolithProgressStart: 0.6,
+          otolithProgressEnd: 0.8,
+        },
+        {
+          id: 5,
+          title: isZh ? "步骤 5: 直立" : "Step 5: Upright",
+          description: isZh
+            ? "慢慢直立起上身，最后回正头部。"
+            : "Sit upright. Center head.",
+          durationSeconds: 30,
+          torsoAngle: 90,
+          bodyRoll: 0,
+          headYaw: 0,
+          headPitch: 0,
+          otolithProgressStart: 0.8,
+          otolithProgressEnd: 1.0,
+        }
+      ]
+    },
+
+    // --- BBQ ROLL (Horizontal Canal) ---
+    BBQ_RIGHT: {
+      id: 'bbq_right',
+      name: isZh ? "BBQ 翻滚法 (右耳)" : "BBQ Roll (Right)",
+      description: bbqDescription,
+      difficulty: 'Hard',
+      precautions: commonPrecautions,
+      recommendedFor: {
+        canal: CanalType.HORIZONTAL,
+        side: Side.RIGHT
+      },
+      steps: [
+        {
+          id: 1,
+          title: isZh ? "步骤 1: 患侧卧位" : "Step 1: Lie on Right Side",
+          description: isZh
+            ? "平躺，将头部向【右】转 90 度（患侧）。"
+            : "Lie on your back. Turn head 90 degrees to the RIGHT.",
+          durationSeconds: 30,
+          torsoAngle: 0,
+          bodyRoll: 0,
+          headYaw: -90, // Right
+          headPitch: 0,
+          otolithProgressStart: 0,
+          otolithProgressEnd: 0.2,
+        },
+        {
+          id: 2,
+          title: isZh ? "步骤 2: 回正头部" : "Step 2: Face Up",
+          description: isZh
+            ? "将头部回正，面朝天花板。"
+            : "Turn head back to center (face up).",
+          durationSeconds: 30,
+          torsoAngle: 0,
+          bodyRoll: 0,
+          headYaw: 0,
+          headPitch: 0,
+          otolithProgressStart: 0.2,
+          otolithProgressEnd: 0.4,
+        },
+        {
+          id: 3,
+          title: isZh ? "步骤 3: 转头向健侧" : "Step 3: Turn Head Left",
+          description: isZh
+            ? "将头部向【左】转 90 度（健侧）。"
+            : "Turn head 90 degrees to the LEFT.",
+          durationSeconds: 30,
+          torsoAngle: 0,
+          bodyRoll: 0,
+          headYaw: 90, // Left
+          headPitch: 0,
+          otolithProgressStart: 0.4,
+          otolithProgressEnd: 0.6,
+        },
+        {
+          id: 4,
+          title: isZh ? "步骤 4: 翻身趴下" : "Step 4: Roll to Face Down",
+          description: isZh
+            ? "身体向【左】翻转，直到面部朝下（趴在床上）。头部跟随身体转动，稍微低头支撑在前臂上。"
+            : "Roll body to the LEFT until you are facing down. Support yourself on elbows.",
+          durationSeconds: 30,
+          torsoAngle: 0,
+          bodyRoll: -180, // Face down (rolled via left)
+          headYaw: 0,
+          headPitch: 0,
+          otolithProgressStart: 0.6,
+          otolithProgressEnd: 0.8,
+        },
+        {
+          id: 5,
+          title: isZh ? "步骤 5: 坐起" : "Step 5: Sit Up",
+          description: isZh
+            ? "从侧面慢慢坐起。"
+            : "Slowly sit up from the side.",
+          durationSeconds: 30,
+          torsoAngle: 90,
+          bodyRoll: -90, // Sit up from side
+          headYaw: 0,
+          headPitch: 0,
+          otolithProgressStart: 0.8,
+          otolithProgressEnd: 1.0,
+        }
+      ]
+    },
+    BBQ_LEFT: {
+      id: 'bbq_left',
+      name: isZh ? "BBQ 翻滚法 (左耳)" : "BBQ Roll (Left)",
+      description: bbqDescription,
+      difficulty: 'Hard',
+      precautions: commonPrecautions,
+      recommendedFor: {
+        canal: CanalType.HORIZONTAL,
+        side: Side.LEFT
+      },
+      steps: [
+        {
+          id: 1,
+          title: isZh ? "步骤 1: 患侧卧位" : "Step 1: Lie on Left Side",
+          description: isZh
+            ? "平躺，将头部向【左】转 90 度（患侧）。"
+            : "Lie on your back. Turn head 90 degrees to the LEFT.",
+          durationSeconds: 30,
+          torsoAngle: 0,
+          bodyRoll: 0,
+          headYaw: 90, // Left
+          headPitch: 0,
+          otolithProgressStart: 0,
+          otolithProgressEnd: 0.2,
+        },
+        {
+          id: 2,
+          title: isZh ? "步骤 2: 回正头部" : "Step 2: Face Up",
+          description: isZh
+            ? "将头部回正，面朝天花板。"
+            : "Turn head back to center (face up).",
+          durationSeconds: 30,
+          torsoAngle: 0,
+          bodyRoll: 0,
+          headYaw: 0,
+          headPitch: 0,
+          otolithProgressStart: 0.2,
+          otolithProgressEnd: 0.4,
+        },
+        {
+          id: 3,
+          title: isZh ? "步骤 3: 转头向健侧" : "Step 3: Turn Head Right",
+          description: isZh
+            ? "将头部向【右】转 90 度（健侧）。"
+            : "Turn head 90 degrees to the RIGHT.",
+          durationSeconds: 30,
+          torsoAngle: 0,
+          bodyRoll: 0,
+          headYaw: -90, // Right
+          headPitch: 0,
+          otolithProgressStart: 0.4,
+          otolithProgressEnd: 0.6,
+        },
+        {
+          id: 4,
+          title: isZh ? "步骤 4: 翻身趴下" : "Step 4: Roll to Face Down",
+          description: isZh
+            ? "身体向【右】翻转，直到面部朝下（趴在床上）。"
+            : "Roll body to the RIGHT until you are facing down.",
+          durationSeconds: 30,
+          torsoAngle: 0,
+          bodyRoll: 180, // Face down (rolled via right)
+          headYaw: 0,
+          headPitch: 0,
+          otolithProgressStart: 0.6,
+          otolithProgressEnd: 0.8,
+        },
+        {
+          id: 5,
+          title: isZh ? "步骤 5: 坐起" : "Step 5: Sit Up",
+          description: isZh
+            ? "从侧面慢慢坐起。"
+            : "Slowly sit up.",
+          durationSeconds: 30,
+          torsoAngle: 90,
+          bodyRoll: 90,
+          headYaw: 0,
+          headPitch: 0,
+          otolithProgressStart: 0.8,
           otolithProgressEnd: 1.0,
         }
       ]
