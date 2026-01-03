@@ -125,7 +125,7 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           durationSeconds: 60,
           torsoAngle: 90, // Sitting up
           bodyRoll: 0,    // FIXED: Upright
-          bodyYaw: -90,   // FIXED: Facing Left Edge (Corrected from 90 to -90)
+          bodyYaw: 90,    // FIXED: Facing Left Edge (Corrected to 90 for new HumanModel logic)
           headYaw: 0,
           headPitch: 20, 
           legAngle: 90, 
@@ -230,7 +230,7 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           durationSeconds: 60,
           torsoAngle: 90, // Side Sit
           bodyRoll: 0,    // FIXED: Upright
-          bodyYaw: 90,    // FIXED: Facing Right Edge (Corrected from -90 to 90)
+          bodyYaw: -90,   // FIXED: Facing Right Edge (Corrected to -90 for new HumanModel logic)
           headYaw: 0,
           headPitch: 20,
           legAngle: 90, 

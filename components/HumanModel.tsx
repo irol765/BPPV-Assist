@@ -297,8 +297,13 @@ const Scene: React.FC<HumanModelProps> = ({
     if (positionGroup.current) {
         // Slide X based on Yaw (to stay on bed edge when sitting sideways)
         let targetX = 0;
-        if (bodyYaw > 45) targetX = 0.85; 
-        if (bodyYaw < -45) targetX = -0.85; 
+        
+        // REVISED LOGIC (Fix clipping):
+        // Previously: if (bodyYaw > 45) targetX = 0.85; (Input Right -> Position Right)
+        // Issue: We negated rotation (-bodyYaw), so positive Input results in Visual LEFT.
+        // Fix: If Input > 45 (Visual Left), move to LEFT (-0.85).
+        if (bodyYaw > 45) targetX = -0.85; 
+        if (bodyYaw < -45) targetX = 0.85; 
         
         // Vertical Offset (yOffset) - e.g. for kneeling
         const targetY = yOffset;
