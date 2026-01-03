@@ -7,9 +7,6 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, (process as any).cwd(), '');
   return {
     plugins: [react()],
-    define: {
-      // This is necessary to use process.env.API_KEY in the code when deploying with Vite
-      'process.env.API_KEY': JSON.stringify(env.API_KEY)
-    }
+    // 移除了 define 块，不再将 API_KEY 注入到前端代码中
   };
 });
