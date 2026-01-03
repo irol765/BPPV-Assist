@@ -239,7 +239,7 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
             ? "跪在地上（或坐在脚后跟上）。双手撑地，头部尽量向后仰，以此作为起始位置。"
             : "Kneel on the floor. Hands on floor. Tip head straight UP at ceiling.",
           durationSeconds: 15,
-          torsoAngle: 90, // Kneeling upright roughly
+          torsoAngle: 90, 
           bodyRoll: 0,
           headYaw: 0,
           headPitch: -45, // Looking up
@@ -253,10 +253,10 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
             ? "像翻跟头一样，将头顶顶在地上，下巴尽量向膝盖处收紧（倒立位）。保持这个姿势。"
             : "Tuck head completely under like doing a somersault. Top of head on floor, chin tucked to knees.",
           durationSeconds: 30,
-          torsoAngle: 90, 
+          torsoAngle: 135, // Leaning forward (45 deg past vertical)
           bodyRoll: 0,
           headYaw: 0,
-          headPitch: 85, // Max tuck
+          headPitch: 85, // Max tuck to look under
           otolithProgressStart: 0.1,
           otolithProgressEnd: 0.4,
         },
@@ -267,7 +267,7 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
             ? "保持头顶在地上的姿势不变，将面部向【右】侧手肘方向转动 45 度。"
             : "While keeping head on floor, turn face 45 degrees to the RIGHT elbow.",
           durationSeconds: 30,
-          torsoAngle: 90,
+          torsoAngle: 135, // Maintain forward lean
           bodyRoll: 0,
           headYaw: -45, // Right
           headPitch: 85, // Still tucked
@@ -281,10 +281,10 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
             ? "保持头部向右偏转的角度，利用双手支撑，快速将头部和背部抬起至水平位置（像四脚桌一样）。"
             : "Keeping head turned right, quickly raise head/back to horizontal (tabletop position).",
           durationSeconds: 30,
-          torsoAngle: 45, // Leaning forward/Tabletop
+          torsoAngle: 170, // Horizontal back (approx 170-180)
           bodyRoll: 0,
           headYaw: -45,
-          headPitch: 0, // Level with back
+          headPitch: -80, // Extended neck to look level while body is horizontal
           otolithProgressStart: 0.6,
           otolithProgressEnd: 0.8,
         },
@@ -295,7 +295,7 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
             ? "保持头部偏转，慢慢直立起上身。最后将头转回正前方。"
             : "Slowly kneel upright. Then turn head forward.",
           durationSeconds: 30,
-          torsoAngle: 90,
+          torsoAngle: 90, // Upright
           bodyRoll: 0,
           headYaw: 0,
           headPitch: 0,
@@ -336,7 +336,7 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
             ? "头顶触地，下巴尽量收向膝盖（倒立位）。"
             : "Tuck head under like a somersault. Chin to knees.",
           durationSeconds: 30,
-          torsoAngle: 90,
+          torsoAngle: 135, // Forward lean
           bodyRoll: 0,
           headYaw: 0,
           headPitch: 85,
@@ -350,7 +350,7 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
             ? "保持头顶在地，将面部向【左】侧手肘转动 45 度。"
             : "Turn face 45 degrees to the LEFT elbow.",
           durationSeconds: 30,
-          torsoAngle: 90,
+          torsoAngle: 135, // Forward lean
           bodyRoll: 0,
           headYaw: 45, // Left
           headPitch: 85,
@@ -364,10 +364,10 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
             ? "保持头左偏，快速抬起头背至水平位置（四脚桌姿势）。"
             : "Raise head/back to tabletop position, keeping head turned left.",
           durationSeconds: 30,
-          torsoAngle: 45,
+          torsoAngle: 170, // Horizontal back
           bodyRoll: 0,
           headYaw: 45,
-          headPitch: 0,
+          headPitch: -80, // Extended neck to look level
           otolithProgressStart: 0.6,
           otolithProgressEnd: 0.8,
         },
