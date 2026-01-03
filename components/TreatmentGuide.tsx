@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Maneuver, Language } from '../types';
 import HumanModel from './HumanModel';
@@ -117,6 +118,7 @@ const TreatmentGuide: React.FC<TreatmentGuideProps> = ({ maneuver, onComplete, o
                 armAngle={step.armAngle}
                 elbowAngle={step.elbowAngle}
                 yOffset={step.yOffset}
+                showBed={!maneuver.id.toLowerCase().includes('foster')}
             />
             
             {/* Overlay Title for Landscape (since header is in sidebar) */}

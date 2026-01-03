@@ -1,4 +1,5 @@
-import React, { useRef } from 'react';
+
+import React, { useRef, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { RoundedBox, Sphere, Cylinder, Box, ContactShadows, OrbitControls, Plane, Environment } from '@react-three/drei';
 import * as THREE from 'three';
@@ -23,7 +24,7 @@ declare global {
 
 // --- Types ---
 interface HumanModelProps {
-  torsoAngle: number; // 90 (sit) to 0 (lie)
+  torsoAngle: number; // 90 (sit) to 0 (lie) to 180 (fold)
   bodyRoll: number;   // -90 (left side) to 90 (right side)
   bodyYaw?: number;   // Rotation of whole body relative to bed
   headYaw: number;    // -45 to 45 (relative to torso)
@@ -33,6 +34,7 @@ interface HumanModelProps {
   armAngle?: number;  // 0 (down), 90 (forward/up)
   elbowAngle?: number;// 0 (straight), 90 (bent)
   yOffset?: number;   // Vertical adjustment
+  showBed?: boolean;  // Toggle bed visibility
 }
 
 // --- Animated Body Parts ---
@@ -140,33 +142,15 @@ const Leg: React.FC<{
         const damp = 5.0;
         
         // Hip Rotation (Thigh)
-        // legAngle 0 = Vertical/Straight (aligned with torso), 90 = Horizontal (sitting)
-        const targetHipX = THREE.MathUtils.degToRad(-legAngle); // Negative to raise leg forward
-        
-        // Wait, if torso is lying down (horizontal), legAngle 0 means leg is horizontal (aligned).
-        // If torso is sitting (vertical), legAngle 90 means leg is horizontal.
-        // Rotation is relative to PELVIS.
-        // Pelvis is part of BodyGroup.
-        // Leg Geometry: Thigh box center at -0.5 (below pivot).
-        // So at rot 0, thigh is pointing DOWN (-Y).
-        // If we want thigh horizontal (Sitting), we rotate X by -90 or +90.
-        // Forward flexion is typically -90 in this coordinate system (since facing Z?). 
-        // Let's assume positive legAngle is flexion (forward). 
-        // With current geometry, -90 X rotation brings the leg up to forward horizontal.
-        
-        // Let's correct direction based on observation. 
-        // Previous code used `targetHipX = degToRad(legAngle)`. 
-        // If legAngle=90, rot=90. Thigh goes BACKWARDS?
-        // Let's stick to positive = flexion (forward/up) if the geometry allows.
-        // Correcting: usually -90 X is forward lift.
-        
+        // legAngle 0 = Vertical/Straight (aligned with torso)
+        // legAngle 90 = Flexed forward (sitting)
+        // In this geometry, -X rotation raises the leg forward.
         if (thighRef.current) {
             thighRef.current.rotation.x = THREE.MathUtils.damp(thighRef.current.rotation.x, -THREE.MathUtils.degToRad(legAngle), damp, delta);
         }
 
         // Knee Rotation (Shin)
         // kneeAngle 0 = Straight. 90 = Bent (backwards).
-        // Positive X rotation swings lower leg BACK.
         const targetKneeX = THREE.MathUtils.degToRad(kneeAngle);
         if (shinRef.current) {
             shinRef.current.rotation.x = THREE.MathUtils.damp(shinRef.current.rotation.x, targetKneeX, damp, delta);
@@ -254,36 +238,49 @@ const Bed: React.FC = () => (
 const Scene: React.FC<HumanModelProps> = ({ 
     torsoAngle, bodyRoll, bodyYaw = 0, headYaw, headPitch, 
     legAngle = 0, kneeAngle = 0, armAngle = 0, elbowAngle = 0,
-    yOffset = 0
+    yOffset = 0,
+    showBed = true
 }) => {
   const positionGroup = useRef<THREE.Group>(null);
-  const bodyGroup = useRef<THREE.Group>(null);
+  const bedOrientationRef = useRef<THREE.Group>(null); // Outer: Yaw relative to bed
+  const bodyPostureRef = useRef<THREE.Group>(null);    // Inner: Sit/Lie (X) + Log Roll (Y)
   const headPivotGroup = useRef<THREE.Group>(null);
+
+  // Set rotation order for bodyPostureRef to 'YXZ'
+  // This ensures we apply the "Log Roll" (Y) around the spine axis BEFORE we tilt the spine (X).
+  // This fixes the Gimbal Lock issue where rolling while lying down would rotate around the wrong world axis.
+  useEffect(() => {
+    if (bodyPostureRef.current) {
+      bodyPostureRef.current.rotation.order = 'YXZ';
+    }
+  }, []);
   
   useFrame((state, delta) => {
     const dampFactor = 5.0; 
 
-    // Complex Body Rotation
-    if (bodyGroup.current) {
-        // torsoAngle: 90=Sit, 0=Lie. 
-        // When lying (0), rotation should be -90 deg X (falling back).
-        // When sitting (90), rotation should be 0 deg X (upright).
-        const radTorso = THREE.MathUtils.degToRad(torsoAngle - 90); 
-        
+    // 1. Bed Orientation (Global Yaw)
+    // Rotating the person relative to the bed (e.g., sitting on side vs lying straight)
+    if (bedOrientationRef.current) {
         const radYaw = THREE.MathUtils.degToRad(bodyYaw);
-        const radRoll = THREE.MathUtils.degToRad(bodyRoll);
-
-        const curRot = bodyGroup.current.rotation;
-        
-        const nextX = THREE.MathUtils.damp(curRot.x, radTorso, dampFactor, delta);
-        const nextY = THREE.MathUtils.damp(curRot.y, radYaw, dampFactor, delta);
-        const nextZ = THREE.MathUtils.damp(curRot.z, radRoll, dampFactor, delta);
-
-        // Order YXZ: Turn (Yaw) -> Lean Back/Sit (Pitch/X) -> Roll (Z)
-        bodyGroup.current.rotation.set(nextX, nextY, nextZ, 'YXZ');
+        bedOrientationRef.current.rotation.y = THREE.MathUtils.damp(bedOrientationRef.current.rotation.y, radYaw, dampFactor, delta);
     }
 
-    // Head Animation
+    // 2. Body Posture (Sit/Lie + Log Roll)
+    if (bodyPostureRef.current) {
+        // X: Torso Angle 
+        // 90 (Sit) -> 0 deg
+        // 0 (Lie) -> -90 deg
+        const radSit = THREE.MathUtils.degToRad(torsoAngle - 90);
+        
+        // Y: Body Roll 
+        // -90 (Left Side) -> -90 deg (Turn Right + Lie Back = Left Side Down)
+        const radRoll = THREE.MathUtils.degToRad(bodyRoll);
+
+        bodyPostureRef.current.rotation.x = THREE.MathUtils.damp(bodyPostureRef.current.rotation.x, radSit, dampFactor, delta);
+        bodyPostureRef.current.rotation.y = THREE.MathUtils.damp(bodyPostureRef.current.rotation.y, radRoll, dampFactor, delta);
+    }
+
+    // 3. Head Animation (Relative to Torso)
     if (headPivotGroup.current) {
         const targetYaw = THREE.MathUtils.degToRad(headYaw);
         const targetHeadPitch = THREE.MathUtils.degToRad(headPitch);
@@ -291,14 +288,14 @@ const Scene: React.FC<HumanModelProps> = ({
         headPivotGroup.current.rotation.x = THREE.MathUtils.damp(headPivotGroup.current.rotation.x, targetHeadPitch, 5, delta);
     }
 
-    // Position Animation (Sliding + Vertical Offset)
+    // 4. Position Animation (Sliding + Vertical Offset)
     if (positionGroup.current) {
-        // Slide X based on Yaw (to stay on bed edge)
+        // Slide X based on Yaw (to stay on bed edge when sitting sideways)
         let targetX = 0;
         if (bodyYaw > 45) targetX = 0.5; 
         if (bodyYaw < -45) targetX = -0.5; 
         
-        // Vertical Offset (yOffset)
+        // Vertical Offset (yOffset) - e.g. for kneeling
         const targetY = yOffset;
 
         positionGroup.current.position.x = THREE.MathUtils.damp(positionGroup.current.position.x, targetX, dampFactor, delta);
@@ -308,16 +305,19 @@ const Scene: React.FC<HumanModelProps> = ({
 
   return (
     <group position={[0, -0.5, 0]}> {/* Global Scene offset to lower the bed/floor */}
-        {/* Bed stays static relative to the room */}
-        <Bed />
+        {/* Bed is now optional and independent of body hierarchy */}
+        {showBed && <Bed />}
         
-        {/* Position Group moves the human relative to the bed (includes yOffset) */}
         <group ref={positionGroup}> 
-            <group ref={bodyGroup}>
-                <LowerBody legAngle={legAngle} kneeAngle={kneeAngle} />
-                <Torso armAngle={armAngle} elbowAngle={elbowAngle} />
-                <group ref={headPivotGroup} position={[0, 1.2, 0]}>
-                    <Head />
+            {/* Outer Group: Orientation on Bed (Yaw) */}
+            <group ref={bedOrientationRef}>
+                {/* Inner Group: Posture (Sit/Lie + Roll). rotation-order YXZ is critical. */}
+                <group ref={bodyPostureRef}>
+                    <LowerBody legAngle={legAngle} kneeAngle={kneeAngle} />
+                    <Torso armAngle={armAngle} elbowAngle={elbowAngle} />
+                    <group ref={headPivotGroup} position={[0, 1.2, 0]}>
+                        <Head />
+                    </group>
                 </group>
             </group>
         </group>
