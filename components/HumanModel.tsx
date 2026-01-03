@@ -242,45 +242,47 @@ const Scene: React.FC<HumanModelProps> = ({
     showBed = true
 }) => {
   const positionGroup = useRef<THREE.Group>(null);
-  const bedOrientationRef = useRef<THREE.Group>(null); // Outer: Yaw relative to bed
-  const bodyPostureRef = useRef<THREE.Group>(null);    // Inner: Sit/Lie (X) + Log Roll (Y)
+  
+  // Refactor: Use 3-layer nesting to avoid Gimbal Lock.
+  // Layer 1: Orientation (Yaw) - Controls which way the body faces relative to the bed/room.
+  const orientationRef = useRef<THREE.Group>(null);
+  
+  // Layer 2: Posture (Pitch) - Controls Sitting (90deg) vs Lying (0deg).
+  // This rotates the "Local X" axis.
+  const postureRef = useRef<THREE.Group>(null);
+  
+  // Layer 3: Spine Roll (Roll) - Controls rolling around the body's spine (Local Y axis).
+  // Because this is nested inside Posture, when the body lies down (Pitch -90),
+  // this Y-axis becomes horizontal in the world, allowing for a correct "Log Roll".
+  const rollRef = useRef<THREE.Group>(null);
+
   const headPivotGroup = useRef<THREE.Group>(null);
 
-  // Set rotation order for bodyPostureRef to 'YXZ'
-  // This ensures we apply the "Log Roll" (Y) around the spine axis BEFORE we tilt the spine (X).
-  // This fixes the Gimbal Lock issue where rolling while lying down would rotate around the wrong world axis.
-  useEffect(() => {
-    if (bodyPostureRef.current) {
-      bodyPostureRef.current.rotation.order = 'YXZ';
-    }
-  }, []);
-  
   useFrame((state, delta) => {
     const dampFactor = 5.0; 
 
-    // 1. Bed Orientation (Global Yaw)
-    // Rotating the person relative to the bed (e.g., sitting on side vs lying straight)
-    if (bedOrientationRef.current) {
+    // 1. Layer 1: Orientation (Global Yaw)
+    if (orientationRef.current) {
         const radYaw = THREE.MathUtils.degToRad(bodyYaw);
-        bedOrientationRef.current.rotation.y = THREE.MathUtils.damp(bedOrientationRef.current.rotation.y, radYaw, dampFactor, delta);
+        orientationRef.current.rotation.y = THREE.MathUtils.damp(orientationRef.current.rotation.y, radYaw, dampFactor, delta);
     }
 
-    // 2. Body Posture (Sit/Lie + Log Roll)
-    if (bodyPostureRef.current) {
-        // X: Torso Angle 
-        // 90 (Sit) -> 0 deg
-        // 0 (Lie) -> -90 deg
-        const radSit = THREE.MathUtils.degToRad(torsoAngle - 90);
-        
-        // Y: Body Roll 
-        // -90 (Left Side) -> -90 deg (Turn Right + Lie Back = Left Side Down)
+    // 2. Layer 2: Posture (Pitch)
+    // torsoAngle 90 (sit) -> 0 rad
+    // torsoAngle 0 (lie) -> -PI/2 rad
+    if (postureRef.current) {
+        const radPitch = THREE.MathUtils.degToRad(torsoAngle - 90);
+        postureRef.current.rotation.x = THREE.MathUtils.damp(postureRef.current.rotation.x, radPitch, dampFactor, delta);
+    }
+
+    // 3. Layer 3: Spine Roll (Roll)
+    // Rotation around the spine axis (Local Y)
+    if (rollRef.current) {
         const radRoll = THREE.MathUtils.degToRad(bodyRoll);
-
-        bodyPostureRef.current.rotation.x = THREE.MathUtils.damp(bodyPostureRef.current.rotation.x, radSit, dampFactor, delta);
-        bodyPostureRef.current.rotation.y = THREE.MathUtils.damp(bodyPostureRef.current.rotation.y, radRoll, dampFactor, delta);
+        rollRef.current.rotation.y = THREE.MathUtils.damp(rollRef.current.rotation.y, radRoll, dampFactor, delta);
     }
 
-    // 3. Head Animation (Relative to Torso)
+    // Head Animation (Relative to Spine)
     if (headPivotGroup.current) {
         const targetYaw = THREE.MathUtils.degToRad(headYaw);
         const targetHeadPitch = THREE.MathUtils.degToRad(headPitch);
@@ -288,7 +290,7 @@ const Scene: React.FC<HumanModelProps> = ({
         headPivotGroup.current.rotation.x = THREE.MathUtils.damp(headPivotGroup.current.rotation.x, targetHeadPitch, 5, delta);
     }
 
-    // 4. Position Animation (Sliding + Vertical Offset)
+    // Position Animation (Sliding + Vertical Offset)
     if (positionGroup.current) {
         // Slide X based on Yaw (to stay on bed edge when sitting sideways)
         let targetX = 0;
@@ -305,18 +307,20 @@ const Scene: React.FC<HumanModelProps> = ({
 
   return (
     <group position={[0, -0.5, 0]}> {/* Global Scene offset to lower the bed/floor */}
-        {/* Bed is now optional and independent of body hierarchy */}
         {showBed && <Bed />}
         
         <group ref={positionGroup}> 
-            {/* Outer Group: Orientation on Bed (Yaw) */}
-            <group ref={bedOrientationRef}>
-                {/* Inner Group: Posture (Sit/Lie + Roll). rotation-order YXZ is critical. */}
-                <group ref={bodyPostureRef}>
-                    <LowerBody legAngle={legAngle} kneeAngle={kneeAngle} />
-                    <Torso armAngle={armAngle} elbowAngle={elbowAngle} />
-                    <group ref={headPivotGroup} position={[0, 1.2, 0]}>
-                        <Head />
+            {/* Layer 1: Orientation (Yaw) */}
+            <group ref={orientationRef}>
+                {/* Layer 2: Posture (Pitch) */}
+                <group ref={postureRef}>
+                    {/* Layer 3: Spine Roll (Roll) - Geometry Container */}
+                    <group ref={rollRef}>
+                        <LowerBody legAngle={legAngle} kneeAngle={kneeAngle} />
+                        <Torso armAngle={armAngle} elbowAngle={elbowAngle} />
+                        <group ref={headPivotGroup} position={[0, 1.2, 0]}>
+                            <Head />
+                        </group>
                     </group>
                 </group>
             </group>

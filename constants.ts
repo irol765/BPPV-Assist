@@ -267,8 +267,8 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           headPitch: -45, // Looking up
           legAngle: 0, // Thigh vertical aligned with torso
           kneeAngle: 90, // Shin back
-          armAngle: 30,
-          elbowAngle: 0,
+          armAngle: 20,
+          elbowAngle: 10,
           yOffset: 0.4, // Kneeling offset
           otolithProgressStart: 0,
           otolithProgressEnd: 0.1,
@@ -286,8 +286,8 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           headPitch: 85, // Max tuck
           legAngle: 0,
           kneeAngle: 90,
-          armAngle: 150, // Arms reaching up/forward to floor
-          elbowAngle: 45, // Elbows bent
+          armAngle: 120,
+          elbowAngle: 45,
           yOffset: 0.4,
           otolithProgressStart: 0.1,
           otolithProgressEnd: 0.4,
@@ -305,7 +305,7 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           headPitch: 85, 
           legAngle: 0,
           kneeAngle: 90,
-          armAngle: 150, // Maintain arm support
+          armAngle: 120,
           elbowAngle: 45,
           yOffset: 0.4,
           otolithProgressStart: 0.4,
@@ -373,8 +373,8 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           headPitch: -45,
           legAngle: 0,
           kneeAngle: 90,
-          armAngle: 30,
-          elbowAngle: 0,
+          armAngle: 20,
+          elbowAngle: 10,
           yOffset: 0.4,
           otolithProgressStart: 0,
           otolithProgressEnd: 0.1,
@@ -392,7 +392,7 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           headPitch: 85,
           legAngle: 0,
           kneeAngle: 90,
-          armAngle: 150, // Arms support
+          armAngle: 120,
           elbowAngle: 45,
           yOffset: 0.4,
           otolithProgressStart: 0.1,
@@ -411,7 +411,7 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           headPitch: 85,
           legAngle: 0,
           kneeAngle: 90,
-          armAngle: 150, // Maintain arms
+          armAngle: 120,
           elbowAngle: 45,
           yOffset: 0.4,
           otolithProgressStart: 0.4,
@@ -699,4 +699,3 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
     }
   };
 };
-
