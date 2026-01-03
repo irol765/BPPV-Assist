@@ -1,4 +1,5 @@
 
+
 import React, { useRef, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { RoundedBox, Sphere, Cylinder, Box, ContactShadows, OrbitControls, Plane, Environment } from '@react-three/drei';
@@ -296,8 +297,8 @@ const Scene: React.FC<HumanModelProps> = ({
     if (positionGroup.current) {
         // Slide X based on Yaw (to stay on bed edge when sitting sideways)
         let targetX = 0;
-        if (bodyYaw > 45) targetX = 0.5; 
-        if (bodyYaw < -45) targetX = -0.5; 
+        if (bodyYaw > 45) targetX = 0.85; 
+        if (bodyYaw < -45) targetX = -0.85; 
         
         // Vertical Offset (yOffset) - e.g. for kneeling
         const targetY = yOffset;
