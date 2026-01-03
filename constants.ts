@@ -123,8 +123,8 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
             : "Keep chin tucked. Push up from your side to a sitting position.",
           durationSeconds: 60,
           torsoAngle: 90, // Sitting up
-          bodyRoll: -90,  // From side
-          bodyYaw: 90, 
+          bodyRoll: 0,    // FIXED: Upright (was -90)
+          bodyYaw: 90,    // Facing Left Edge (relative to bed start)
           headYaw: 0,
           headPitch: 20, 
           legAngle: 90, 
@@ -228,8 +228,8 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
             : "Keep chin tucked and sit up from side.",
           durationSeconds: 60,
           torsoAngle: 90, // Side Sit
-          bodyRoll: 90,
-          bodyYaw: -90,
+          bodyRoll: 0,    // FIXED: Upright (was 90)
+          bodyYaw: -90,   // Facing Right Edge
           headYaw: 0,
           headPitch: 20,
           legAngle: 90, 
@@ -318,7 +318,7 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           legAngle: 90, // Thighs vertical
           kneeAngle: 90,
           armAngle: 90, // Arms support
-          yOffset: 0.2, // Tabletop offset
+          yOffset: 0.4, // FIXED: Increased offset to prevent clipping
           otolithProgressStart: 0.6,
           otolithProgressEnd: 0.8,
         },
@@ -417,7 +417,7 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           legAngle: 90,
           kneeAngle: 90,
           armAngle: 90,
-          yOffset: 0.2,
+          yOffset: 0.4, // FIXED: Increased offset
           otolithProgressStart: 0.6,
           otolithProgressEnd: 0.8,
         },
@@ -523,7 +523,6 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           otolithProgressStart: 0.6,
           otolithProgressEnd: 0.8,
         },
-        // NEW STEP: Intermediate transition for BBQ Right (Rolling onto Left Side)
         {
           id: 5,
           title: isZh ? "步骤 4b: 转为侧卧" : "Step 4b: Roll to Side",
@@ -551,7 +550,8 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
             : "Push up with your hands to sit up from the side. Stay upright.",
           durationSeconds: 30,
           torsoAngle: 90, // Side Sit
-          bodyRoll: -90, 
+          bodyRoll: 0,    // FIXED: Upright (was -90)
+          bodyYaw: 90,    // FIXED: Facing Left Edge
           headYaw: 0,
           headPitch: 0,
           legAngle: 90,
@@ -643,7 +643,6 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
           otolithProgressStart: 0.6,
           otolithProgressEnd: 0.8,
         },
-        // NEW STEP: Intermediate transition for BBQ Left (Rolling onto Right Side)
         {
           id: 5,
           title: isZh ? "步骤 4b: 转为侧卧" : "Step 4b: Roll to Side",
@@ -671,7 +670,8 @@ export const getManeuvers = (lang: Language): Record<string, Maneuver> => {
             : "Push up with your hands to sit up from the side. Stay upright.",
           durationSeconds: 30,
           torsoAngle: 90, // Side Sit
-          bodyRoll: 90,
+          bodyRoll: 0,    // FIXED: Upright (was 90)
+          bodyYaw: -90,   // FIXED: Facing Right Edge
           headYaw: 0,
           headPitch: 0,
           legAngle: 90,

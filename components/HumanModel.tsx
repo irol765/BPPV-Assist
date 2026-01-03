@@ -307,7 +307,7 @@ const Scene: React.FC<HumanModelProps> = ({
   });
 
   return (
-    <group position={[0, -1, 0]}> {/* Global Scene offset to lower the bed/floor */}
+    <group position={[0, -0.5, 0]}> {/* Global Scene offset to lower the bed/floor */}
         {/* Bed stays static relative to the room */}
         <Bed />
         

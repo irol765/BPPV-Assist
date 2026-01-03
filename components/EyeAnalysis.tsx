@@ -364,7 +364,6 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
 
   // --- Step 2 & 3: Interactive Instructions ---
   if (step === 'instruction-turn' || step === 'instruction-lie') {
-      // ... (Keep existing instruction rendering logic)
       const isLeft = selectedSide === Side.LEFT;
       const isTurn = step === 'instruction-turn';
       
@@ -373,6 +372,13 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
       const headYaw = isLeft ? 45 : -45; 
       const headPitch = isTurn ? 0 : -20;
 
+      // Ensure correct sitting posture (legs horizontal) for Step 1
+      const legAngle = isTurn ? 90 : 0; 
+      const kneeAngle = 0; 
+      const armAngle = 0;
+      const elbowAngle = isTurn ? 10 : 0;
+      const yOffset = 0;
+
       return (
           <div className="flex flex-col w-full max-w-md mx-auto bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
               <div className="h-64 bg-slate-100 relative">
@@ -380,7 +386,12 @@ const EyeAnalysis: React.FC<EyeAnalysisProps> = ({ onDiagnosisComplete, lang }) 
                     torsoAngle={torsoAngle}
                     bodyRoll={bodyRoll}
                     headYaw={headYaw} 
-                    headPitch={headPitch} 
+                    headPitch={headPitch}
+                    legAngle={legAngle}
+                    kneeAngle={kneeAngle}
+                    armAngle={armAngle}
+                    elbowAngle={elbowAngle}
+                    yOffset={yOffset}
                   />
                   <div className="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-medical-600 border border-medical-100">
                       {isTurn ? 'Step 1' : 'Step 2'}
