@@ -116,6 +116,7 @@ const TreatmentGuide: React.FC<TreatmentGuideProps> = ({ maneuver, onComplete, o
                 kneeAngle={step.kneeAngle}
                 armAngle={step.armAngle}
                 elbowAngle={step.elbowAngle}
+                yOffset={step.yOffset}
             />
             
             {/* Overlay Title for Landscape (since header is in sidebar) */}

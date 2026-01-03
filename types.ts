@@ -31,12 +31,15 @@ export interface ManeuverStep {
   bodyYaw?: number;   // Rotation of the whole body on bed. 0 = feet at footboard. 90 = facing left edge.
   headYaw: number;    // Left/Right rotation (degrees). Positive = Left, Negative = Right
   headPitch: number;  // Up/Down tilt. Positive = Chin tuck, Negative = Extension (hanging back)
-  legAngle?: number;  // 0 = Legs straight on bed, 80 = Legs hanging down (Sitting)
+  legAngle?: number;  // 0 = Legs straight (parallel to torso), 90 = Legs bent at hip (sitting)
   
   // Joint Control
   kneeAngle?: number; // 0=Straight, 90=Bent
   armAngle?: number;  // 0=By side, 90=Forward
   elbowAngle?: number;// 0=Straight, 90=Bent
+
+  // Vertical Correction
+  yOffset?: number;   // Lift the model up/down to fix clipping (e.g. for kneeling)
 
   // Otolith Simulation
   otolithProgressStart: number; // 0 to 1 path progress
